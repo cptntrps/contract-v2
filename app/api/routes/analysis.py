@@ -207,7 +207,7 @@ def analyze_contract():
             }), 400
         
         # Validate contract ID format to prevent injection attacks
-        if not contract_id.isalnum() or len(contract_id) > 50:
+        if not contract_id.replace('_', '').isalnum() or len(contract_id) > 50:
             return jsonify({
                 'success': False,
                 'error': 'Invalid contract ID format'
@@ -340,7 +340,7 @@ def start_analysis():
             }), 400
         
         # Validate contract ID format to prevent injection attacks
-        if not contract_id.isalnum() or len(contract_id) > 50:
+        if not contract_id.replace('_', '').isalnum() or len(contract_id) > 50:
             return jsonify({
                 'success': False,
                 'error': 'Invalid contract ID format'

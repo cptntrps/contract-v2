@@ -86,19 +86,33 @@ def generate_report():
         report_generator = create_report_generator(config)
         
         # Prepare analysis data for report generation
-        analysis_data = {
-            'id': analysis_result.analysis_id,
-            'contract': analysis_result.contract_id,
-            'template': analysis_result.template_id,
-            'date': analysis_result.analysis_timestamp.strftime('%Y-%m-%d'),
-            'changes': analysis_result.total_changes,
-            'similarity': round(analysis_result.similarity_score * 100, 1),
-            'status': 'completed',
-            'analysis': [change.to_dict() for change in analysis_result.changes]
-        }
-        
-        # Generate base name for reports
-        base_name = f"{analysis_result.contract_id}_{analysis_result.template_id}_{analysis_result.analysis_timestamp.strftime('%Y%m%d_%H%M%S')}"
+        # Handle both dictionary and object formats
+        if isinstance(analysis_result, dict):
+            # Dictionary format (frontend-compatible)
+            analysis_data = {
+                'id': analysis_result.get('id', analysis_id),
+                'contract': analysis_result.get('contract', 'Unknown'),
+                'template': analysis_result.get('template', 'Unknown'),
+                'date': analysis_result.get('date', 'Unknown'),
+                'changes': analysis_result.get('changes', 0),
+                'similarity': analysis_result.get('similarity', 0),
+                'status': 'completed',
+                'analysis': analysis_result.get('analysis', [])
+            }
+            base_name = f"{analysis_result.get('contract', 'contract')}_{analysis_result.get('template', 'template')}_{analysis_result.get('date', 'date').replace('-', '').replace(':', '')}"
+        else:
+            # Object format (analysis result object)
+            analysis_data = {
+                'id': analysis_result.analysis_id,
+                'contract': analysis_result.contract_id,
+                'template': analysis_result.template_id,
+                'date': analysis_result.analysis_timestamp.strftime('%Y-%m-%d'),
+                'changes': analysis_result.total_changes,
+                'similarity': round(analysis_result.similarity_score * 100, 1),
+                'status': 'completed',
+                'analysis': [change.to_dict() for change in analysis_result.changes]
+            }
+            base_name = f"{analysis_result.contract_id}_{analysis_result.template_id}_{analysis_result.analysis_timestamp.strftime('%Y%m%d_%H%M%S')}"
         
         # Log report generation start
         security_auditor.log_security_event(

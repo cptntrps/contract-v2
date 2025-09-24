@@ -35,7 +35,6 @@ class SecurityEventType(Enum):
     REPORT_GENERATION_COMPLETED = "report_generation_completed"
     REPORT_GENERATION_FAILED = "report_generation_failed"
     REPORT_GENERATION_ERROR = "report_generation_error"
-    API_ACCESS = "api_access"
 
 
 class SecurityAuditor:

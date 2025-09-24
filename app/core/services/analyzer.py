@@ -111,7 +111,7 @@ class ContractAnalyzer:
             
             # Step 2: Perform text comparison
             similarity_score = self.comparison_engine.calculate_similarity(template_text, contract_text)
-            text_changes = self.comparison_engine.find_changes(template_text, contract_text)
+            text_changes = self.comparison_engine.find_detailed_changes(template_text, contract_text)
             
             logger.info(f"Text comparison completed - Similarity: {similarity_score:.3f}, Changes: {len(text_changes)}")
             
@@ -128,25 +128,28 @@ class ContractAnalyzer:
             
             # Step 4: Convert text changes to Change objects
             changes = []
-            for i, (operation, text) in enumerate(text_changes):
+            for i, change_dict in enumerate(text_changes):
                 change_id = f"{analysis_id}_change_{i+1}"
+                operation = change_dict['operation']
+                deleted_text = change_dict.get('deleted_text', '')
+                inserted_text = change_dict.get('inserted_text', '')
                 
+                # Generate appropriate explanation based on operation type
                 if operation == 'delete':
-                    change = create_change_from_diff(
-                        change_id=change_id,
-                        deleted_text=text,
-                        inserted_text="",
-                        explanation="Text removed from template"
-                    )
+                    explanation = "Text removed from template"
                 elif operation == 'insert':
-                    change = create_change_from_diff(
-                        change_id=change_id,
-                        deleted_text="",
-                        inserted_text=text,
-                        explanation="Text added to contract"
-                    )
+                    explanation = "Text added to contract"
+                elif operation == 'replace':
+                    explanation = "Text modified in contract"
                 else:
-                    continue  # Skip other operations
+                    continue  # Skip unknown operations
+                
+                change = create_change_from_diff(
+                    change_id=change_id,
+                    deleted_text=deleted_text,
+                    inserted_text=inserted_text,
+                    explanation=explanation
+                )
                 
                 changes.append(change)
             
