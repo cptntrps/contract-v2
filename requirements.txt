@@ -21,10 +21,17 @@ python-dotenv
 # Logging
 python-json-logger
 
+# Database dependencies
+sqlalchemy==2.0.23
+flask-sqlalchemy==3.1.1
+alembic==1.13.1
+flask-migrate==4.0.5
+
 # Testing (development)
 pytest
 pytest-cov
 pytest-mock
+pytest-flask
 
 # Windows COM interface (Windows only)
 # pywin32 

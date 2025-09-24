@@ -23,7 +23,13 @@ contracts_bp = Blueprint('contracts', __name__)
 security_validator = SecurityValidator()
 security_auditor = SecurityAuditor()
 
-# Store contracts in memory for this session (in production, use database)
+# Database repositories
+from ...database.repositories import ContractRepository
+
+# Initialize repository
+contract_repository = ContractRepository()
+
+# Legacy in-memory store (for migration compatibility)
 contracts_store = {}
 
 
@@ -96,17 +102,11 @@ def init_contracts_store():
 def list_contracts():
     """List all uploaded contracts with metadata"""
     try:
-        # Initialize contracts from uploads directory if store is empty
-        if not contracts_store:
-            initialize_contracts_from_uploads()
+        # Get contracts from database
+        contracts = contract_repository.get_recent(limit=100)
         
-        contracts_list = []
-        
-        for contract in contracts_store.values():
-            contracts_list.append(contract.get_summary())
-        
-        # Sort by upload date (newest first)
-        contracts_list.sort(key=lambda x: x['upload_date'], reverse=True)
+        # Convert to summary format
+        contracts_list = [contract.get_summary() for contract in contracts]
         
         return jsonify({
             'success': True,
@@ -189,7 +189,10 @@ def upload_contract():
             file_size=file_size
         )
         
-        # Store contract (in production, save to database)
+        # Store contract in database
+        contract_repository.create_from_domain(contract)
+        
+        # Also store in memory for legacy compatibility
         contracts_store[contract_id] = contract
         
         # Log successful upload
@@ -228,17 +231,18 @@ def upload_contract():
 def get_contract(contract_id):
     """Get contract details by ID"""
     try:
-        if contract_id not in contracts_store:
+        # Get contract from database
+        contract_model = contract_repository.get_by_id(contract_id)
+        
+        if not contract_model:
             return jsonify({
                 'success': False,
                 'error': 'Contract not found'
             }), 404
         
-        contract = contracts_store[contract_id]
-        
         return jsonify({
             'success': True,
-            'contract': contract.get_summary()
+            'contract': contract_model.get_summary()
         })
         
     except Exception as e:

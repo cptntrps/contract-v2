@@ -12,6 +12,7 @@ from werkzeug.middleware.proxy_fix import ProxyFix
 
 from ..utils.security.audit import default_auditor, SecurityEventType
 from ..utils.logging.setup import get_logger
+from ..database import init_app as init_database
 
 logger = get_logger(__name__)
 
@@ -42,12 +43,18 @@ def create_api_app(config) -> Flask:
         'TEMPLATES_FOLDER': str(config.BASE_DIR / config.TEMPLATES_FOLDER),
         'REPORTS_FOLDER': str(config.BASE_DIR / config.REPORTS_FOLDER),
         'MAX_CONTENT_LENGTH': config.MAX_CONTENT_LENGTH,
-        'TESTING': getattr(config, 'TESTING', False)
+        'TESTING': getattr(config, 'TESTING', False),
+        # Database configuration
+        'SQLALCHEMY_DATABASE_URI': getattr(config, 'DATABASE_URL', 'sqlite:///contract_analyzer.db'),
+        'SQLALCHEMY_TRACK_MODIFICATIONS': False
     })
     
     # Add proxy fix for production deployments
     if config.ENV == 'production':
         app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1, x_prefix=1)
+    
+    # Initialize database
+    init_database(app)
     
     # Register middleware
     register_middleware(app, config)
