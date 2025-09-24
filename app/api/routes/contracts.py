@@ -15,6 +15,9 @@ from ...core.models.contract import Contract, validate_contract_file
 from ...utils.security.validators import SecurityValidator
 from ...utils.security.audit import SecurityAuditor
 from ...utils.logging.setup import get_logger
+from ...utils.errors.exceptions import ValidationError, NotFoundError, DatabaseError
+from ...utils.errors.validators import ValidationHandler, validate_schema, ContractUploadSchema
+from ...utils.errors.responses import create_error_response
 
 logger = get_logger(__name__)
 contracts_bp = Blueprint('contracts', __name__)
@@ -126,19 +129,22 @@ def list_contracts():
 def upload_contract():
     """Upload a new contract file"""
     try:
-        # Validate request
-        if 'file' not in request.files:
-            return jsonify({
-                'success': False,
-                'error': 'No file provided'
-            }), 400
+        # Validate request data
+        request_data = {
+            'file': request.files.get('file'),
+            'description': request.form.get('description'),
+            'tags': request.form.getlist('tags') or []
+        }
         
-        file = request.files['file']
-        if file.filename == '':
-            return jsonify({
-                'success': False,
-                'error': 'No file selected'
-            }), 400
+        validated_data = validate_schema(ContractUploadSchema, request_data)
+        file = validated_data['file']
+        
+        # Enhanced file validation
+        file_info = ValidationHandler.validate_file_upload(
+            file,
+            allowed_extensions=['docx'],
+            max_size=50 * 1024 * 1024  # 50MB
+        )
         
         # Security validation
         validation_result = security_validator.validate_file_content(file)
@@ -231,26 +237,25 @@ def upload_contract():
 def get_contract(contract_id):
     """Get contract details by ID"""
     try:
+        # Validate contract ID
+        validated_id = ValidationHandler.validate_contract_id(contract_id)
+        
         # Get contract from database
-        contract_model = contract_repository.get_by_id(contract_id)
+        contract_model = contract_repository.get_by_id(validated_id)
         
         if not contract_model:
-            return jsonify({
-                'success': False,
-                'error': 'Contract not found'
-            }), 404
+            raise NotFoundError("contract", validated_id)
         
         return jsonify({
             'success': True,
             'contract': contract_model.get_summary()
         })
         
+    except (ValidationError, NotFoundError):
+        raise  # Re-raise to be handled by error handlers
     except Exception as e:
         logger.error(f"Error retrieving contract {contract_id}: {e}")
-        return jsonify({
-            'success': False,
-            'error': 'Failed to retrieve contract'
-        }), 500
+        raise DatabaseError("contract_retrieval", f"Failed to retrieve contract: {e}")
 
 
 @contracts_bp.route('/contracts/<contract_id>', methods=['DELETE'])

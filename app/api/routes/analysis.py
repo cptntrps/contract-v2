@@ -206,19 +206,15 @@ def analyze_contract():
                 'error': 'Contract ID is required'
             }), 400
         
-        # Validate contract ID format to prevent injection attacks
-        if not contract_id.replace('_', '').isalnum() or len(contract_id) > 50:
-            return jsonify({
-                'success': False,
-                'error': 'Invalid contract ID format'
-            }), 400
+        # Validate contract ID using enhanced validation
+        try:
+            validated_contract_id = ValidationHandler.validate_contract_id(contract_id)
+        except ValidationError as e:
+            raise e
         
         # Check if contract exists
-        if contract_id not in contracts_store:
-            return jsonify({
-                'success': False,
-                'error': 'Contract not found'
-            }), 404
+        if validated_contract_id not in contracts_store:
+            raise NotFoundError("contract", validated_contract_id)
         
         # Get contract
         contract = contracts_store[contract_id]

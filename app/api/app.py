@@ -13,6 +13,7 @@ from werkzeug.middleware.proxy_fix import ProxyFix
 from ..utils.security.audit import default_auditor, SecurityEventType
 from ..utils.logging.setup import get_logger
 from ..database import init_app as init_database
+from ..utils.errors.handlers import register_error_handlers
 
 logger = get_logger(__name__)
 
@@ -55,6 +56,9 @@ def create_api_app(config) -> Flask:
     
     # Initialize database
     init_database(app)
+    
+    # Register error handlers
+    register_error_handlers(app)
     
     # Register middleware
     register_middleware(app, config)
