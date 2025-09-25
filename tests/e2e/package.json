@@ -1,0 +1,43 @@
+{
+  "name": "contract-analyzer-e2e-tests",
+  "version": "1.0.0",
+  "description": "End-to-end testing suite for Contract Analyzer using Puppeteer",
+  "main": "run-e2e-tests.js",
+  "scripts": {
+    "test": "node run-e2e-tests.js",
+    "test:headless": "node run-e2e-tests.js --headless",
+    "test:debug": "node run-e2e-tests.js --debug",
+    "test:scenario": "node run-e2e-tests.js --scenario",
+    "test:ci": "node run-e2e-tests.js --ci",
+    "demo": "node run-visual-demo.js",
+    "visual-demo": "node run-visual-demo.js",
+    "install-deps": "npm install"
+  },
+  "dependencies": {
+    "puppeteer": "^21.5.0",
+    "puppeteer-extra": "^3.3.6",
+    "puppeteer-extra-plugin-stealth": "^2.11.2",
+    "chai": "^4.3.10",
+    "mocha": "^10.2.0",
+    "fs-extra": "^11.1.1",
+    "path": "^0.12.7",
+    "chalk": "^4.1.2",
+    "yargs": "^17.7.2",
+    "uuid": "^9.0.1",
+    "moment": "^2.29.4",
+    "axios": "^1.6.0"
+  },
+  "devDependencies": {
+    "eslint": "^8.54.0",
+    "@types/puppeteer": "^7.0.4"
+  },
+  "keywords": [
+    "e2e",
+    "puppeteer", 
+    "testing",
+    "automation",
+    "contract-analyzer"
+  ],
+  "author": "Contract Analyzer Team",
+  "license": "ISC"
+}

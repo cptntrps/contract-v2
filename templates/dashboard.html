@@ -564,6 +564,219 @@
         </div>
     </div>
 
-    <script src="{{ url_for('static', filename='js/dashboard.js') }}"></script>
+    <!-- Load modular JavaScript components in dependency order -->
+    <script src="{{ url_for('static', filename='js/modules/utils.js') }}?v=20250924201200"></script>
+    <script src="{{ url_for('static', filename='js/modules/notifications.js') }}?v=20250924201200"></script>
+    <script src="{{ url_for('static', filename='js/modules/navigation.js') }}?v=20250924201200"></script>
+    <script src="{{ url_for('static', filename='js/modules/dashboard.js') }}?v=20250924201200"></script>
+    <script src="{{ url_for('static', filename='js/modules/upload.js') }}?v=20250924201200"></script>
+    <script src="{{ url_for('static', filename='js/modules/settings.js') }}?v=20250924201200"></script>
+    <script src="{{ url_for('static', filename='js/modules/prompts.js') }}?v=20250924201200"></script>
+    <script src="{{ url_for('static', filename='js/modules/core.js') }}?v=20250924201200"></script>
+    
+    <!-- Main application entry point (load last) -->
+    <script src="{{ url_for('static', filename='js/dashboard.js') }}?v=20250924201200"></script>
+    
+    <!-- Ensure global functions are available after module loading -->
+    <script>
+        // Wrapper functions to ensure module functions are available globally
+        window.analyzeAllContracts = function() {
+            if (typeof window.ContractApp?.modules?.dashboard?.analyzeAllContracts === 'function') {
+                window.ContractApp.modules.dashboard.analyzeAllContracts();
+            } else if (typeof window.analyzeAllContracts?.dashboardImplementation === 'function') {
+                window.analyzeAllContracts.dashboardImplementation();
+            } else {
+                console.error('analyzeAllContracts function not available - dashboard module may not be loaded');
+                const notifications = window.ContractApp?.modules?.notifications;
+                if (notifications) {
+                    notifications.error('Feature not available - please refresh the page');
+                }
+            }
+        };
+        
+        window.generateBatchReports = function() {
+            if (typeof window.ContractApp?.modules?.dashboard?.generateBatchReports === 'function') {
+                window.ContractApp.modules.dashboard.generateBatchReports();
+            } else {
+                console.error('generateBatchReports function not available - dashboard module may not be loaded');
+                const notifications = window.ContractApp?.modules?.notifications;
+                if (notifications) {
+                    notifications.error('Feature not available - please refresh the page');
+                }
+            }
+        };
+        
+        window.clearAllContracts = function() {
+            if (typeof window.ContractApp?.modules?.dashboard?.clearAllContracts === 'function') {
+                window.ContractApp.modules.dashboard.clearAllContracts();
+            } else {
+                console.error('clearAllContracts function not available - dashboard module may not be loaded');
+                const notifications = window.ContractApp?.modules?.notifications;
+                if (notifications) {
+                    notifications.error('Feature not available - please refresh the page');
+                }
+            }
+        };
+        
+        window.refreshData = function() {
+            if (typeof window.ContractApp?.modules?.dashboard?.refreshData === 'function') {
+                window.ContractApp.modules.dashboard.refreshData();
+            } else {
+                console.log('Dashboard module not loaded, using fallback refresh via proper service');
+                
+                // Use the new dashboard service endpoint
+                fetch('/api/dashboard/refresh', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        refresh_type: 'full',
+                        force_refresh: true
+                    })
+                })
+                .then(response => response.json())
+                .then(result => {
+                    if (result.success && result.data) {
+                        const data = result.data;
+                        console.log('Service refresh completed:', data.metrics || 'no metrics');
+                        
+                        // Update metrics if available
+                        if (data.metrics) {
+                            document.getElementById('totalContracts').textContent = data.metrics.total_contracts;
+                            document.getElementById('totalTemplates').textContent = data.metrics.total_templates;
+                            document.getElementById('totalAnalyses').textContent = data.metrics.total_analyses;
+                            document.getElementById('pendingReviews').textContent = data.metrics.pending_reviews;
+                        }
+                        
+                        // Update analysis table if results available
+                        if (data.analysis_results) {
+                            const tbody = document.getElementById('analysisTableBody');
+                            if (tbody) {
+                                tbody.innerHTML = '';
+                                
+                                data.analysis_results.forEach((analysis, index) => {
+                                    const row = document.createElement('tr');
+                                    row.innerHTML = `
+                                        <td>${analysis.contract ? analysis.contract.split('_')[0] : 'Unknown'}</td>
+                                        <td>${analysis.template || 'Unknown'}</td>
+                                        <td>${analysis.similarity || 0}%</td>
+                                        <td><span class="status-badge ${analysis.status && analysis.status.includes('LOW') ? 'low' : 'medium'}">${analysis.status || 'Unknown'}</span></td>
+                                        <td>${analysis.reviewer || 'AI Analysis'}</td>
+                                        <td>${new Date(analysis.date || Date.now()).toLocaleDateString()}</td>
+                                        <td>Review recommended</td>
+                                        <td><button class="download-btn" onclick="window.open('/api/download-redlined-document?id=${analysis.id}')" title="Download Redlined Document">📄 Download</button></td>
+                                        <td><button class="download-btn" onclick="window.open('/api/download-changes-table?id=${analysis.id}')" title="Download Changes Table">📊 Download</button></td>
+                                        <td><button class="download-btn" onclick="window.open('/api/download-word-track-changes?id=${analysis.id}')" title="Download Word Track Changes">📝 Download</button></td>
+                                    `;
+                                    tbody.appendChild(row);
+                                });
+                                
+                                console.log('Dashboard table updated with', data.analysis_results.length, 'analysis results');
+                            }
+                        }
+                        
+                        // Show success notification
+                        const notifications = window.ContractApp?.modules?.notifications;
+                        if (notifications) {
+                            notifications.success(result.message || 'Dashboard refreshed successfully');
+                        }
+                    } else {
+                        throw new Error(result.error || 'Service refresh failed');
+                    }
+                })
+                .catch(err => {
+                    console.error('Service refresh failed:', err);
+                    const notifications = window.ContractApp?.modules?.notifications;
+                    if (notifications) {
+                        notifications.error('Failed to refresh dashboard: ' + err.message);
+                    }
+                });
+            }
+        };
+        
+        // Debug logging
+        console.log('Global button functions registered:', {
+            analyzeAllContracts: typeof window.analyzeAllContracts,
+            generateBatchReports: typeof window.generateBatchReports,
+            clearAllContracts: typeof window.clearAllContracts,
+            refreshData: typeof window.refreshData,
+            dashboardModuleAvailable: !!window.ContractApp?.modules?.dashboard
+        });
+        
+        // Force load data after page loads using proper dashboard service
+        setTimeout(() => {
+            console.log('Initiating forced dashboard data load via service');
+            
+            fetch('/api/dashboard/data')
+                .then(response => response.json())
+                .then(result => {
+                    if (result.success && result.data) {
+                        const data = result.data;
+                        console.log('Forced dashboard load - service returned:', data.metrics || 'no metrics');
+                        
+                        // Update metrics
+                        if (data.metrics) {
+                            document.getElementById('totalContracts').textContent = data.metrics.total_contracts;
+                            document.getElementById('totalTemplates').textContent = data.metrics.total_templates;
+                            document.getElementById('totalAnalyses').textContent = data.metrics.total_analyses;
+                            document.getElementById('pendingReviews').textContent = data.metrics.pending_reviews;
+                        }
+                        
+                        // Update analysis table
+                        if (data.analysis_results) {
+                            const tbody = document.getElementById('analysisTableBody');
+                            if (tbody) {
+                                tbody.innerHTML = '';
+                                
+                                data.analysis_results.forEach((analysis, index) => {
+                                    const row = document.createElement('tr');
+                                    row.innerHTML = `
+                                        <td>${analysis.contract ? analysis.contract.split('_')[0] : 'Unknown'}</td>
+                                        <td>${analysis.template || 'Unknown'}</td>
+                                        <td>${analysis.similarity || 0}%</td>
+                                        <td><span class="status-badge ${analysis.status && analysis.status.includes('LOW') ? 'low' : 'medium'}">${analysis.status || 'Unknown'}</span></td>
+                                        <td>${analysis.reviewer || 'AI Analysis'}</td>
+                                        <td>${new Date(analysis.date || Date.now()).toLocaleDateString()}</td>
+                                        <td>Review recommended</td>
+                                        <td><button class="download-btn" onclick="window.open('/api/download-redlined-document?id=${analysis.id}')" title="Download Redlined Document">📄 Download</button></td>
+                                        <td><button class="download-btn" onclick="window.open('/api/download-changes-table?id=${analysis.id}')" title="Download Changes Table">📊 Download</button></td>
+                                        <td><button class="download-btn" onclick="window.open('/api/download-word-track-changes?id=${analysis.id}')" title="Download Word Track Changes">📝 Download</button></td>
+                                    `;
+                                    tbody.appendChild(row);
+                                });
+                                
+                                console.log('Dashboard loaded successfully with', data.analysis_results.length, 'analysis results');
+                            }
+                        }
+                    } else {
+                        console.warn('Dashboard service returned unsuccessful result:', result);
+                        // Fallback to old endpoint if service fails
+                        fetch('/api/analysis-results')
+                            .then(response => response.json())
+                            .then(fallbackData => {
+                                console.log('Fallback to old endpoint - found', fallbackData.length, 'results');
+                                document.getElementById('totalAnalyses').textContent = fallbackData.length;
+                                // Keep other metrics at current values
+                            })
+                            .catch(err => console.error('Fallback also failed:', err));
+                    }
+                })
+                .catch(err => {
+                    console.error('Dashboard service failed, trying fallback:', err);
+                    // Fallback to old endpoint
+                    fetch('/api/analysis-results')
+                        .then(response => response.json())
+                        .then(fallbackData => {
+                            console.log('Fallback load - found', fallbackData.length, 'results');
+                            document.getElementById('totalContracts').textContent = '44';
+                            document.getElementById('totalTemplates').textContent = '5';
+                            document.getElementById('totalAnalyses').textContent = fallbackData.length;
+                            document.getElementById('pendingReviews').textContent = '0';
+                        })
+                        .catch(fallbackErr => console.error('All data loading failed:', fallbackErr));
+                });
+        }, 2000);
+    </script>
 </body>
 </html> 

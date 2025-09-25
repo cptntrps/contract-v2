@@ -252,12 +252,16 @@ class TestErrorResponse:
     
     def test_create_error_response(self):
         """Test create_error_response function"""
-        error = ValidationError("Test error")
-        response, status_code = create_error_response(error)
+        from flask import Flask
+        app = Flask(__name__)
         
-        assert status_code == 400
-        assert response.json['success'] is False
-        assert response.json['error'] == "ValidationError"
+        with app.app_context():
+            error = ValidationError("Test error")
+            response, status_code = create_error_response(error)
+            
+            assert status_code == 400
+            assert response.json['success'] is False
+            assert response.json['error'] == "ValidationError"
 
 
 class TestErrorHandlerIntegration:
@@ -271,8 +275,7 @@ class TestErrorHandlerIntegration:
         app.config['DEBUG'] = False
         
         # Register error handlers
-        auditor = SecurityAuditor()
-        register_error_handlers(app, auditor)
+        register_error_handlers(app)
         
         # Add test routes that raise errors
         @app.route('/test/validation-error')

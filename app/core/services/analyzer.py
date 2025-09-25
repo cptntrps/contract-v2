@@ -12,9 +12,11 @@ from typing import Dict, List, Any, Optional, Tuple
 
 from .document_processor import DocumentProcessor
 from .comparison_engine import ComparisonEngine
+from .incremental_analyzer import IncrementalAnalyzer
 from ..models.contract import Contract
 from ..models.analysis_result import AnalysisResult, Change, create_change_from_diff
 from ...services.llm.providers import create_llm_provider
+from ...services.nlp import SemanticAnalyzer, EntityExtractor, ClauseClassifier, RiskAnalyzer
 from ...utils.logging.setup import get_logger
 
 logger = get_logger(__name__)
@@ -48,10 +50,17 @@ class ContractAnalyzer:
         # Initialize components
         self.document_processor = DocumentProcessor()
         self.comparison_engine = ComparisonEngine()
+        self.incremental_analyzer = None  # Will be initialized when LLM is available
         
         # LLM provider for analysis
         self.llm_provider = None
         self._initialize_llm_provider()
+        
+        # NLP components for semantic analysis
+        self.semantic_analyzer = SemanticAnalyzer(config.get('nlp_settings', {}))
+        self.entity_extractor = EntityExtractor(config.get('nlp_settings', {}))
+        self.clause_classifier = ClauseClassifier(config.get('nlp_settings', {}))
+        self.risk_analyzer = RiskAnalyzer(config.get('nlp_settings', {}))
         
         logger.info("Contract analyzer initialized")
     
@@ -61,12 +70,23 @@ class ContractAnalyzer:
             llm_config = self.config.get('llm_settings', {})
             provider_name = llm_config.get('provider', 'openai')
             
+            # Ensure API key is included for OpenAI
+            if provider_name == 'openai' and 'api_key' not in llm_config:
+                import os
+                from dotenv import load_dotenv
+                load_dotenv()
+                api_key = os.getenv('OPENAI_API_KEY')
+                if api_key:
+                    llm_config['api_key'] = api_key
+            
             self.llm_provider = create_llm_provider(provider_name, llm_config)
-            logger.info(f"LLM provider initialized: {provider_name}")
+            self.incremental_analyzer = IncrementalAnalyzer(self.llm_provider)
+            logger.info(f"LLM provider and incremental analyzer initialized: {provider_name}")
             
         except Exception as e:
             logger.error(f"Failed to initialize LLM provider: {e}")
             self.llm_provider = None
+            self.incremental_analyzer = None
     
     def analyze_contract(
         self,
@@ -153,32 +173,42 @@ class ContractAnalyzer:
                 
                 changes.append(change)
             
-            # Step 5: LLM Analysis (if enabled and provider available)
-            if include_llm_analysis and self.llm_provider:
+            # Step 5: Advanced Semantic Analysis
+            try:
+                semantic_analysis = self._perform_semantic_analysis(
+                    contract_text, template_text, changes
+                )
+                analysis_result.metadata['semantic_analysis'] = semantic_analysis
+                logger.info("Semantic analysis completed")
+            except Exception as e:
+                logger.warning(f"Semantic analysis failed: {e}")
+            
+            # Step 6: Incremental LLM Analysis (if enabled and provider available)
+            if include_llm_analysis and self.incremental_analyzer:
                 try:
-                    enhanced_changes = self._perform_llm_analysis(
-                        changes, contract_text, template_text, analysis_result
+                    enhanced_changes = self._perform_incremental_analysis(
+                        changes, contract_text, template_text
                     )
                     changes = enhanced_changes
-                    logger.info(f"LLM analysis completed - Enhanced {len(changes)} changes")
+                    logger.info(f"Incremental LLM analysis completed - Enhanced {len(changes)} changes")
                     
                 except Exception as e:
-                    logger.warning(f"LLM analysis failed, using basic analysis: {e}")
+                    logger.warning(f"Incremental LLM analysis failed, using basic analysis: {e}")
                     # Continue with basic analysis
             
-            # Step 6: Add changes to analysis result
+            # Step 7: Add changes to analysis result
             for change in changes:
                 analysis_result.add_change(change)
             
-            # Step 7: Generate business recommendations
+            # Step 8: Generate business recommendations
             analysis_result.recommendations = self._generate_recommendations(analysis_result)
             analysis_result.risk_explanation = self._generate_risk_explanation(analysis_result)
             
-            # Step 8: Calculate final processing time
+            # Step 9: Calculate final processing time
             processing_time = time.time() - start_time
             analysis_result.processing_time_seconds = processing_time
             
-            # Step 9: Update contract with analysis results
+            # Step 10: Update contract with analysis results
             contract.mark_analyzed(
                 template_used=Path(template_path).name,
                 changes_count=analysis_result.total_changes,
@@ -251,6 +281,48 @@ class ContractAnalyzer:
         except Exception as e:
             logger.error(f"LLM analysis failed: {e}")
             return changes  # Return original changes if LLM fails
+    
+    def _perform_incremental_analysis(
+        self,
+        changes: List[Change],
+        contract_text: str,
+        template_text: str
+    ) -> List[Change]:
+        """
+        Perform incremental analysis of changes, one at a time
+        
+        Args:
+            changes: List of changes to analyze
+            contract_text: Full contract text for context
+            template_text: Full template text for context
+            
+        Returns:
+            Enhanced changes with individual analysis
+        """
+        if not changes or not self.incremental_analyzer:
+            return changes
+        
+        logger.info(f"Starting incremental analysis of {len(changes)} changes")
+        enhanced_changes = []
+        
+        for i, change in enumerate(changes):
+            try:
+                # Get context for this change
+                context = self.incremental_analyzer.get_change_context(
+                    contract_text, change
+                )
+                
+                # Analyze this specific change
+                enhanced_change = self.incremental_analyzer.analyze_change(change, context)
+                enhanced_changes.append(enhanced_change)
+                
+                logger.debug(f"Analyzed change {i+1}/{len(changes)}: {enhanced_change.classification}")
+                
+            except Exception as e:
+                logger.warning(f"Failed to analyze change {i+1}: {e}")
+                enhanced_changes.append(change)  # Keep original if analysis fails
+        
+        return enhanced_changes
     
     def _build_analysis_prompt(
         self,
@@ -341,6 +413,120 @@ Respond in JSON format:
         except Exception as e:
             logger.error(f"Failed to parse LLM analysis: {e}")
             return original_changes
+    
+    def _perform_semantic_analysis(
+        self, 
+        contract_text: str, 
+        template_text: str, 
+        changes: List[Change]
+    ) -> Dict[str, Any]:
+        """
+        Perform comprehensive semantic analysis using NLP components
+        
+        Args:
+            contract_text: Full contract text
+            template_text: Full template text
+            changes: List of detected changes
+            
+        Returns:
+            Dict containing comprehensive semantic analysis results
+        """
+        try:
+            logger.info("Starting comprehensive semantic analysis")
+            
+            # Convert changes to dict format for semantic analysis
+            change_dicts = []
+            for change in changes:
+                change_dict = {
+                    'id': change.change_id,
+                    'deleted_text': change.deleted_text or '',
+                    'inserted_text': change.inserted_text or '',
+                    'operation': 'replace' if change.deleted_text and change.inserted_text else ('delete' if change.deleted_text else 'insert')
+                }
+                change_dicts.append(change_dict)
+            
+            # 1. Semantic Analysis
+            semantic_results = self.semantic_analyzer.analyze_semantic_changes(
+                template_text, contract_text, change_dicts
+            )
+            
+            # 2. Entity Extraction
+            contract_entities = self.entity_extractor.extract_entities(contract_text)
+            template_entities = self.entity_extractor.extract_entities(template_text)
+            
+            # 3. Clause Classification
+            contract_clauses = self.clause_classifier.classify_clauses(contract_text)
+            template_clauses = self.clause_classifier.classify_clauses(template_text)
+            
+            # 4. Risk Analysis
+            risk_assessment = self.risk_analyzer.analyze_risks(contract_text, change_dicts)
+            
+            # Combine all analysis results
+            comprehensive_analysis = {
+                'semantic_analysis': semantic_results,
+                'entity_analysis': {
+                    'contract_entities': {
+                        'entities': [entity.__dict__ for entity in contract_entities.entities],
+                        'entity_counts': contract_entities.entity_counts,
+                        'metadata': contract_entities.extraction_metadata
+                    },
+                    'template_entities': {
+                        'entities': [entity.__dict__ for entity in template_entities.entities],
+                        'entity_counts': template_entities.entity_counts,
+                        'metadata': template_entities.extraction_metadata
+                    }
+                },
+                'clause_analysis': {
+                    'contract_clauses': {
+                        'clauses': [clause.__dict__ for clause in contract_clauses.clauses],
+                        'clause_counts': contract_clauses.clause_counts,
+                        'missing_clauses': contract_clauses.missing_clauses,
+                        'risk_summary': contract_clauses.risk_summary,
+                        'metadata': contract_clauses.analysis_metadata
+                    },
+                    'template_clauses': {
+                        'clauses': [clause.__dict__ for clause in template_clauses.clauses],
+                        'clause_counts': template_clauses.clause_counts,
+                        'missing_clauses': template_clauses.missing_clauses,
+                        'risk_summary': template_clauses.risk_summary,
+                        'metadata': template_clauses.analysis_metadata
+                    }
+                },
+                'risk_analysis': {
+                    'overall_risk_level': risk_assessment.overall_risk_level.value,
+                    'risk_indicators': [indicator.__dict__ for indicator in risk_assessment.risk_indicators],
+                    'risk_summary': risk_assessment.risk_summary,
+                    'recommendations': risk_assessment.recommendations,
+                    'risk_scores': risk_assessment.risk_scores,
+                    'metadata': risk_assessment.analysis_metadata
+                },
+                'analysis_summary': {
+                    'total_semantic_changes': len(semantic_results.get('semantic_changes', [])),
+                    'contract_entities_count': len(contract_entities.entities),
+                    'contract_clauses_count': len(contract_clauses.clauses),
+                    'risk_indicators_count': len(risk_assessment.risk_indicators),
+                    'overall_semantic_similarity': semantic_results.get('similarity_score', 0.0),
+                    'overall_risk_level': risk_assessment.overall_risk_level.value,
+                    'high_risk_changes': semantic_results.get('analysis_metadata', {}).get('high_impact_changes', 0)
+                }
+            }
+            
+            logger.info("Semantic analysis completed successfully")
+            return comprehensive_analysis
+            
+        except Exception as e:
+            logger.error(f"Semantic analysis failed: {str(e)}")
+            return {
+                'error': f"Semantic analysis failed: {str(e)}",
+                'analysis_summary': {
+                    'total_semantic_changes': 0,
+                    'contract_entities_count': 0,
+                    'contract_clauses_count': 0,
+                    'risk_indicators_count': 0,
+                    'overall_semantic_similarity': 0.0,
+                    'overall_risk_level': 'UNKNOWN'
+                }
+            }
     
     def _generate_recommendations(self, analysis_result: AnalysisResult) -> List[str]:
         """Generate business recommendations based on analysis"""

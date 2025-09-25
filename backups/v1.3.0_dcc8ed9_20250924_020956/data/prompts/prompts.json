@@ -1,0 +1,84 @@
+{
+  "prompts": {
+    "individual_analysis": {
+      "name": "Individual Change Analysis",
+      "description": "Detailed analysis for single contract changes",
+      "template": "You are a procurement contract analysis expert specializing in vendor agreements, SOWs, and service contracts. \nAnalyze the following change and identify ALL stakeholders who need to review it:\n\nCHANGE DETAILS:\nDeleted text: \"{deleted_text}\"\nInserted text: \"{inserted_text}\"\n\nANALYSIS REQUIRED:\n1. Business Impact Summary (one sentence)\n2. Primary Category: FINANCIAL | LEGAL_RISK | OPERATIONAL | SCOPE | COMPLIANCE | ADMINISTRATIVE\n3. Risk Level: CRITICAL | HIGH | MEDIUM | LOW | MINIMAL\n4. Financial Impact: DIRECT | INDIRECT | NONE\n5. Required Reviews (select ALL that apply): [\"LEGAL_REVIEW\", \"FINANCE_APPROVAL\", \"OPS_REVIEW\", \"COMPLIANCE_CHECK\", \"SECURITY_REVIEW\", \"EXEC_APPROVAL\"]\n\nSTAKEHOLDER EXAMPLES:\n- LEGAL_REVIEW: Any change to liability, indemnification, termination clauses, IP ownership, dispute resolution, insurance requirements\n- FINANCE_APPROVAL: Pricing changes, payment terms, budgets, penalties, costs, currency, financial obligations\n- OPS_REVIEW: Service levels, deliverables, timelines, resource requirements, performance metrics, technical specifications\n- COMPLIANCE_CHECK: Regulatory requirements, audit rights, certifications, data privacy, compliance attestations\n- SECURITY_REVIEW: Data access, security requirements, confidentiality terms, system integration, access controls\n- EXEC_APPROVAL: High-value changes (>$100K impact), strategic vendor relationships, major scope changes\n\nRESPONSE FORMAT (respond with valid JSON only):\n{\n  \"explanation\": \"Brief business impact summary\",\n  \"category\": \"PRIMARY_CATEGORY\",\n  \"classification\": \"RISK_LEVEL\", \n  \"financial_impact\": \"DIRECT|INDIRECT|NONE\",\n  \"required_reviews\": [\"STAKEHOLDER1\", \"STAKEHOLDER2\"],\n  \"procurement_flags\": [\"vendor_performance_impact\", \"cost_predictability_risk\"],\n  \"confidence\": \"high|medium|low\",\n  \"review_priority\": \"urgent|high|normal|low\"\n}",
+      "variables": [
+        "deleted_text",
+        "inserted_text"
+      ],
+      "categories": [
+        "FINANCIAL",
+        "LEGAL_RISK",
+        "OPERATIONAL",
+        "SCOPE",
+        "COMPLIANCE",
+        "ADMINISTRATIVE"
+      ],
+      "risk_levels": [
+        "CRITICAL",
+        "HIGH",
+        "MEDIUM",
+        "LOW",
+        "MINIMAL"
+      ],
+      "version": "1.0",
+      "created_date": "2025-07-17T20:24:39.557577",
+      "is_active": true
+    },
+    "batch_analysis": {
+      "name": "Batch Analysis",
+      "description": "Efficient analysis for multiple changes at once",
+      "template": "You are a procurement contract analysis expert. Analyze these contract changes:\n\n{changes_text}\n\nFor each change, analyze:\n1. Business Impact (one sentence)\n2. Category: FINANCIAL | LEGAL_RISK | OPERATIONAL | SCOPE | COMPLIANCE | ADMINISTRATIVE\n3. Risk Level: CRITICAL | HIGH | MEDIUM | LOW | MINIMAL\n4. Financial Impact: DIRECT | INDIRECT | NONE\n5. Required Reviews: [\"LEGAL_REVIEW\", \"FINANCE_APPROVAL\", \"OPS_REVIEW\", \"COMPLIANCE_CHECK\", \"SECURITY_REVIEW\", \"EXEC_APPROVAL\"]\n\nKey Stakeholder Triggers:\n- LEGAL_REVIEW: liability, indemnification, termination, IP, disputes, insurance\n- FINANCE_APPROVAL: pricing, costs, payments, budgets, penalties, currency\n- OPS_REVIEW: service levels, deliverables, timelines, resources, performance\n- COMPLIANCE_CHECK: regulations, audits, certifications, policies\n- SECURITY_REVIEW: data access, confidentiality, system integration\n- EXEC_APPROVAL: high-value changes (>$100K), strategic relationships\n\nJSON Response Format:\n[\n  {\n    \"explanation\": \"Business impact summary\",\n    \"category\": \"CATEGORY\",\n    \"classification\": \"RISK_LEVEL\", \n    \"financial_impact\": \"DIRECT|INDIRECT|NONE\",\n    \"required_reviews\": [\"STAKEHOLDER1\", \"STAKEHOLDER2\"],\n    \"procurement_flags\": [\"batch_processed\"],\n    \"confidence\": \"high|medium|low\",\n    \"review_priority\": \"urgent|high|normal|low\"\n  }\n]",
+      "variables": [
+        "changes_text"
+      ],
+      "categories": [
+        "FINANCIAL",
+        "LEGAL_RISK",
+        "OPERATIONAL",
+        "SCOPE",
+        "COMPLIANCE",
+        "ADMINISTRATIVE"
+      ],
+      "risk_levels": [
+        "CRITICAL",
+        "HIGH",
+        "MEDIUM",
+        "LOW",
+        "MINIMAL"
+      ],
+      "version": "1.0",
+      "created_date": "2025-07-17T20:24:39.557584",
+      "is_active": true
+    },
+    "ultra_fast": {
+      "name": "Ultra-Fast Mode",
+      "description": "Minimal prompt for rapid processing",
+      "template": "Contract changes analysis. JSON array only:\n{change_pairs}\nReply: [{\"type\":\"CATEGORY\",\"risk\":\"LEVEL\",\"desc\":\"brief_description\"}]",
+      "variables": [
+        "change_pairs"
+      ],
+      "categories": [
+        "ADMIN",
+        "FINANCIAL",
+        "LEGAL",
+        "OPERATIONAL"
+      ],
+      "risk_levels": [
+        "HIGH",
+        "MEDIUM",
+        "LOW"
+      ],
+      "version": "1.0",
+      "created_date": "2025-07-17T20:24:39.557585",
+      "is_active": false
+    }
+  },
+  "metadata": {
+    "current_version": "1.0",
+    "last_modified": "2025-07-17T20:24:39.558022",
+    "backup_count": 1
+  }
+}

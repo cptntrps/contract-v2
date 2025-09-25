@@ -1,0 +1,30 @@
+# Core web framework
+flask
+werkzeug
+
+# Document processing
+python-docx
+openpyxl
+
+# Report generation
+reportlab
+
+# HTTP requests
+requests
+
+# LLM integration
+openai
+
+# Configuration management
+python-dotenv
+
+# Logging
+python-json-logger
+
+# Testing (development)
+pytest
+pytest-cov
+pytest-mock
+
+# Windows COM interface (Windows only)
+# pywin32 

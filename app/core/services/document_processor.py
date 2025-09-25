@@ -41,6 +41,10 @@ class DocumentProcessor:
         """
         Extract text content from a .docx file.
         
+        Purpose: Converts DOCX files into plain text for comparison and analysis.
+        Extracts text from both paragraphs and table cells to ensure complete
+        content capture for the contract analysis workflow.
+        
         Args:
             filepath: Path to the .docx file
             
@@ -49,6 +53,10 @@ class DocumentProcessor:
             
         Raises:
             DocumentProcessingError: If text extraction fails
+            
+        AI Context: This is the primary text extraction function for contract documents.
+        If analysis is failing due to missing text, debug here first. Handles both
+        regular paragraphs and table content which is common in legal documents.
         """
         try:
             if not os.path.exists(filepath):
@@ -307,13 +315,25 @@ class DocumentProcessor:
     
     def validate_document(self, filepath: str) -> Dict[str, Any]:
         """
-        Validate a document file
+        Validate a document file for processing readiness.
+        
+        Purpose: Comprehensive validation of uploaded documents before analysis.
+        Checks file existence, type, size, and readability to prevent downstream
+        processing failures and ensure security compliance.
         
         Args:
             filepath: Path to document file
             
         Returns:
-            Validation result with status and details
+            Validation result with status and details including:
+            - valid: Boolean validation status
+            - errors: List of validation failures  
+            - warnings: List of potential issues
+            - metadata: File statistics and properties
+            
+        AI Context: Critical validation checkpoint before document processing.
+        If uploads are failing, check validation results here. Prevents processing
+        of corrupted, oversized, or malicious files.
         """
         result = {
             'valid': False,

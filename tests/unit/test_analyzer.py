@@ -1,16 +1,15 @@
 """
-Unit tests for ContractAnalyzer
+Test main ContractAnalyzer orchestration
 """
-
 import pytest
-from unittest.mock import Mock, patch, mock_open
-from docx import Document
-import tempfile
-import os
+from unittest.mock import Mock, patch, MagicMock, AsyncMock
+from datetime import datetime
+import asyncio
 
-from app.core.services.analyzer import ContractAnalyzer
-from app.core.services.document_processor import DocumentProcessor
-from app.core.services.comparison_engine import ComparisonEngine
+from app.core.services.analyzer import ContractAnalyzer, ContractAnalysisError as AnalysisError
+from app.core.models.analysis_result import AnalysisResult, Change
+from app.core.models.contract import Contract
+from app.utils.errors.exceptions import ValidationError, NotFoundError, LLMError
 
 
 class TestContractAnalyzer:

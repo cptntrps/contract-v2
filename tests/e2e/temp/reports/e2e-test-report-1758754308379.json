@@ -1,0 +1,34 @@
+{
+  "timestamp": "2025-09-24T22:51:48.379Z",
+  "environment": "development",
+  "configuration": {
+    "headless": true,
+    "debug": false,
+    "environment": "development",
+    "testType": "integration",
+    "scenario": "smoke",
+    "parallel": false,
+    "maxConcurrency": 2,
+    "timeout": 300000,
+    "retries": 1,
+    "cleanup": true,
+    "setupData": true,
+    "generateReport": true
+  },
+  "results": {
+    "total": 1,
+    "passed": 0,
+    "failed": 1,
+    "skipped": 0,
+    "duration": 1447,
+    "tests": [
+      {
+        "name": "scenarios/smoke/basic-app-load.test.js",
+        "success": false,
+        "duration": 1447,
+        "error": "Command failed with exit code 1"
+      }
+    ]
+  },
+  "duration": 1518
+}

@@ -1,0 +1,127 @@
+================================================================================
+CONTRACT ANALYZER - FULL DEBUG REPORT
+Generated: 2025-09-24 18:31:31
+================================================================================
+
+## SUMMARY
+✅ Successes: 25
+⚠️  Warnings: 1
+❌ Errors: 1
+
+## ERRORS
+1. Test collection failed
+
+## WARNINGS
+1. Database connection failed
+
+## ENVIRONMENT
+Python: 3.12.3 (main, Aug 14 2025, 17:47:21) [GCC 13.3.0]
+Executable: /home/gui/Contract/contract_analyzer/venv/bin/python
+Virtual env: ✅ /home/gui/Contract/contract_analyzer/venv/bin/python
+
+Critical Packages:
+  flask: ✅
+  pytest: ✅
+  docx: ✅
+  openpyxl: ✅
+  reportlab: ✅
+  sqlalchemy: ✅
+
+## DIRECTORY STRUCTURE
+Expected Directories:
+  ✅ app/ (11 items) - Application code
+  ✅ tests/ (9 items) - Test files
+  ✅ docs/ (12 items) - Documentation
+  ✅ scripts/ (17 items) - Utility scripts
+  ✅ data/ (4 items) - Data files
+  ✅ data/uploads/ (45 items) - Uploaded contracts
+  ✅ data/templates/ (6 items) - Contract templates
+  ✅ data/reports/ (18 items) - Generated reports
+  ✅ tests/unit/ (20 items) - Unit tests
+  ✅ tests/integration/ (8 items) - Integration tests
+  ✅ scripts/debug/ (3 items) - Debug scripts
+  ✅ scripts/analysis/ (2 items) - Analysis scripts
+
+## CONFIGURATION
+Configuration Files:
+  ✅ .env (253 bytes) - Environment configuration
+    ✅ OPENAI_API_KEY configured
+    ✅ SECRET_KEY configured
+  ✅ requirements.txt (537 bytes) - Python dependencies
+  ✅ pytest.ini (2075 bytes) - Pytest configuration
+  ✅ pyproject.toml (4116 bytes) - Project configuration
+  ✅ .gitignore (1292 bytes) - Git ignore rules
+
+## IMPORT VALIDATION
+Checking 605 Python files...
+
+✅ No syntax errors found
+
+## APPLICATION STARTUP
+Testing application startup...
+✅ Application imports successful
+✅ Flask app created successfully
+
+Found 58 API routes
+Sample routes:
+  - /api/health
+  - /api/status
+  - /api/model-info
+  - /api/cache-stats
+  - /api/available-models
+
+## DATABASE
+⚠️  Database connection failed: 'Engine' object has no attribute 'execute'
+This may be normal if using in-memory storage
+
+## API ENDPOINTS
+Testing API endpoints:
+  ✅ GET /api/health -> 200
+  ✅ GET /api/contracts -> 200
+  ✅ GET /api/templates -> 200
+  ✅ GET /api/analysis-results -> 200
+
+## TEST SUITE
+✅ Pytest is installed
+
+Found 36 test files
+✅ tests/conftest.py exists
+
+Attempting to collect tests...
+❌ Test collection failed
+Error: 
+
+## DATA FILES
+
+data/uploads/ - Contract uploads:
+  Files: 45
+  Sample files:
+    - .gitkeep (0.1 KB)
+    - Contract_008_Capgemini_SOW_20240208.docx (40.9 KB)
+    - Contract_019_InnovateLabs_NonMatching_20240315.docx (39.4 KB)
+
+data/templates/ - Contract templates:
+  Files: 6
+  Sample files:
+    - .gitkeep (0.0 KB)
+    - VENDOR_EPAM_SOW_v1.docx (40.9 KB)
+    - TYPE_SOW_Standard_v1.docx (39.4 KB)
+
+data/reports/ - Generated reports:
+  Files: 18
+  Sample files:
+    - .gitkeep (0.1 KB)
+    - contract_e5e3f517_20250924_095826_Contract_016_Capgemini_SOW_MODIFIED_20240305.docx_VENDOR_CAPGEMINI_SOW_v1.docx_20250924T142311.704313_redlined_document.docx (40.1 KB)
+    - Contract_002_Generic_SOW_20240118.docx_TYPE_SOW_Standard_v1.docx_20250924T014350.141489_changes_table.xlsx (9.2 KB)
+
+data/prompts/ - LLM prompts:
+  Files: 1
+  Sample files:
+    - prompts.json (5.2 KB)
+
+## SUMMARY & RECOMMENDATIONS
+⚠️  ATTENTION NEEDED!
+Found 1 errors and 1 warnings.
+
+RECOMMENDATIONS:
+4. Fix test configuration and imports

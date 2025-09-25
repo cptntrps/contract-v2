@@ -8,14 +8,35 @@ and error handlers.
 import logging
 from pathlib import Path
 from flask import Flask, request, jsonify
+from flask_cors import CORS
 from werkzeug.middleware.proxy_fix import ProxyFix
 
 from ..utils.security.audit import default_auditor, SecurityEventType
 from ..utils.logging.setup import get_logger
-from ..database import init_app as init_database
 from ..utils.errors.handlers import register_error_handlers
 
 logger = get_logger(__name__)
+
+# Initialize global variables
+DATABASE_AVAILABLE = False
+ASYNC_AVAILABLE = False
+init_database = None
+configure_celery = None
+
+# Try to import optional dependencies with graceful fallback
+try:
+    from ..database import init_app as init_database
+    DATABASE_AVAILABLE = True
+    logger.info("Database support available")
+except ImportError as e:
+    logger.warning(f"Database not available - using in-memory storage only: {e}")
+
+try:
+    from ..async_processing import configure_celery
+    ASYNC_AVAILABLE = True
+    logger.info("Async processing support available") 
+except ImportError as e:
+    logger.warning(f"Async processing not available - using synchronous processing: {e}")
 
 
 def create_api_app(config) -> Flask:
@@ -28,6 +49,7 @@ def create_api_app(config) -> Flask:
     Returns:
         Configured Flask application
     """
+    global DATABASE_AVAILABLE, ASYNC_AVAILABLE
     # Create Flask app
     app = Flask(
         __name__,
@@ -54,8 +76,26 @@ def create_api_app(config) -> Flask:
     if config.ENV == 'production':
         app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1, x_prefix=1)
     
-    # Initialize database
-    init_database(app)
+    # Enable CORS for all routes
+    CORS(app, origins=['http://localhost:5000', 'http://127.0.0.1:5000'])
+    
+    # Initialize database if available
+    if DATABASE_AVAILABLE and init_database:
+        try:
+            init_database(app)
+            logger.info("Database initialized successfully")
+        except Exception as e:
+            logger.error(f"Database initialization failed: {e}")
+            DATABASE_AVAILABLE = False
+    
+    # Initialize async processing if available
+    if ASYNC_AVAILABLE and configure_celery:
+        try:
+            configure_celery(app)
+            logger.info("Async processing initialized successfully")
+        except Exception as e:
+            logger.error(f"Async processing initialization failed: {e}")
+            ASYNC_AVAILABLE = False
     
     # Register error handlers
     register_error_handlers(app)
@@ -188,20 +228,32 @@ def register_error_handlers(app: Flask):
         
         return jsonify({'error': 'Internal server error'}), 500
     
-    @app.errorhandler(Exception)
-    def handle_exception(error):
-        """Handle unexpected exceptions"""
-        logger.exception(f"Unhandled exception: {error}")
-        
-        # Log security event for unexpected errors
-        default_auditor.log_security_event(
-            SecurityEventType.ERROR_OCCURRED,
-            {'error_type': 'unhandled_exception', 'error': str(error)},
-            'ERROR',
-            request.remote_addr if request else None
-        )
-        
-        return jsonify({'error': 'An unexpected error occurred'}), 500
+    # Removed generic exception handler - using detailed ErrorHandler class instead
+    # @app.errorhandler(Exception)
+    # def handle_exception(error):
+    #     """Handle unexpected exceptions"""
+    #     logger.exception(f"Unhandled exception: {error}")
+    #     
+    #     # Log security event for unexpected errors
+    #     default_auditor.log_security_event(
+    #         SecurityEventType.ERROR_OCCURRED,
+    #         {'error_type': 'unhandled_exception', 'error': str(error)},
+    #         'ERROR',
+    #         request.remote_addr if request else None
+    #     )
+    #     
+    #     return jsonify({'error': 'An unexpected error occurred'}), 500
+
+
+def init_async_processing(app: Flask):
+    """Initialize async processing with Celery"""
+    try:
+        celery_app = configure_celery(app)
+        app.celery = celery_app
+        logger.info("Async processing initialized with Celery")
+    except Exception as e:
+        logger.error(f"Failed to initialize async processing: {e}")
+        # Don't fail app startup if Celery is not available
 
 
 def register_routes(app: Flask, config):
@@ -221,6 +273,8 @@ def register_routes(app: Flask, config):
     from .routes.reports import reports_bp
     from .routes.prompts import prompts_bp
     from .routes.compatibility import compatibility_bp
+    from .routes.dashboard import dashboard_bp  # Add dashboard routes
+    from .async_routes import async_bp  # Add async processing routes
     
     # Register blueprints
     app.register_blueprint(health_bp, url_prefix='/api')
@@ -229,6 +283,13 @@ def register_routes(app: Flask, config):
     app.register_blueprint(reports_bp, url_prefix='/api')
     app.register_blueprint(prompts_bp, url_prefix='/api')
     app.register_blueprint(compatibility_bp, url_prefix='/api')  # Legacy compatibility
+    app.register_blueprint(dashboard_bp)  # Dashboard routes (includes /api prefix)
+    app.register_blueprint(async_bp)  # Async processing routes
+    
+    # Initialize contracts store with existing uploaded files
+    with app.app_context():
+        from .routes.contracts import init_contracts_store
+        init_contracts_store()
     
     logger.info("Application routes registered")
 

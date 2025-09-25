@@ -1,0 +1,569 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Contract Review Dashboard</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/dashboard.css') }}">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+</head>
+<body>
+    <!-- Sidebar Navigation -->
+    <nav class="sidebar">
+        <div class="sidebar-header">
+            <div class="logo">
+                <i class="fas fa-file-contract"></i>
+                <span>Contract Review</span>
+            </div>
+        </div>
+        <ul class="sidebar-menu">
+            <li class="menu-item active">
+                <a href="#" data-tab="dashboard">
+                    <i class="fas fa-tachometer-alt"></i>
+                    <span>Dashboard</span>
+                </a>
+            </li>
+            <li class="menu-item">
+                <a href="#" data-tab="upload">
+                    <i class="fas fa-folder-open"></i>
+                    <span>Upload</span>
+                </a>
+            </li>
+            <li class="menu-item">
+                <a href="#" data-tab="prompts">
+                    <i class="fas fa-edit"></i>
+                    <span>Prompts</span>
+                </a>
+            </li>
+            <li class="menu-item">
+                <a href="#" data-tab="settings">
+                    <i class="fas fa-cog"></i>
+                    <span>Settings</span>
+                </a>
+            </li>
+        </ul>
+        <div class="sidebar-footer">
+            <div class="system-status">
+                <i class="fas fa-circle status-indicator" id="systemStatus"></i>
+                <span id="statusText">System Status</span>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <main class="main-content">
+        <!-- Mobile Menu Toggle -->
+        <button class="menu-toggle" onclick="toggleSidebar()">
+            <i class="fas fa-bars"></i>
+        </button>
+        
+        <!-- Header -->
+        <header class="content-header">
+            <div class="header-content">
+                <div class="header-left">
+                    <button class="sidebar-toggle" onclick="toggleSidebar()">
+                        <i class="fas fa-bars"></i>
+                    </button>
+                    <h1 id="pageTitle">Contract Review Dashboard</h1>
+                </div>
+                <div class="header-info">
+                    <div class="model-status">
+                        <span class="health-indicator" id="health-indicator" title="System Status"></span>
+                        <span id="model-status-text">Loading...</span>
+                    </div>
+                </div>
+                <div class="header-actions">
+                    <button class="upload-btn" onclick="openUploadModal()">
+                        <i class="fas fa-upload"></i>
+                        Upload Contract
+                    </button>
+                </div>
+            </div>
+        </header>
+
+        <!-- Dashboard Tab -->
+        <div class="tab-content active" id="dashboard">
+            <!-- Dashboard Overview -->
+            <div class="overview-section">
+                <div class="metrics-grid">
+                    <div class="metric-card">
+                        <div class="metric-icon">
+                            <i class="fas fa-file-contract"></i>
+                        </div>
+                        <div class="metric-content">
+                            <div class="metric-value" id="totalContracts">0</div>
+                            <div class="metric-label">Total Contracts</div>
+                        </div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="metric-icon">
+                            <i class="fas fa-file-alt"></i>
+                        </div>
+                        <div class="metric-content">
+                            <div class="metric-value" id="totalTemplates">0</div>
+                            <div class="metric-label">Templates</div>
+                        </div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="metric-icon">
+                            <i class="fas fa-chart-line"></i>
+                        </div>
+                        <div class="metric-content">
+                            <div class="metric-value" id="totalAnalyses">0</div>
+                            <div class="metric-label">Analyses</div>
+                        </div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="metric-icon">
+                            <i class="fas fa-exclamation-triangle"></i>
+                        </div>
+                        <div class="metric-content">
+                            <div class="metric-value" id="pendingReviews">0</div>
+                            <div class="metric-label">Pending Reviews</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Analysis Results Table -->
+            <div class="table-section">
+                <div class="table-header">
+                    <h2>Contract Analysis Results</h2>
+                    <div class="table-actions">
+                        <button class="action-btn" onclick="refreshData()">
+                            <i class="fas fa-sync-alt"></i>
+                            Refresh
+                        </button>
+                        <button class="action-btn primary" onclick="analyzeAllContracts()">
+                            <i class="fas fa-play"></i>
+                            Analyze All
+                        </button>
+                    </div>
+                </div>
+                <div class="table-container">
+                    <table class="analysis-table">
+                        <thead>
+                            <tr>
+                                <th>Contract Name</th>
+                                <th>Matched Template</th>
+                                <th>Match Confidence</th>
+                                <th>Review Status</th>
+                                <th>Reviewer</th>
+                                <th>Date Reviewed</th>
+                                <th>Suggested Next Step</th>
+                                <th>Redlined Document</th>
+                                <th>Changes Table</th>
+                                <th>Word Track Changes</th>
+                            </tr>
+                        </thead>
+                        <tbody id="analysisTableBody">
+                            <!-- Results will be populated here -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+
+
+        <!-- Upload Tab -->
+        <div class="tab-content" id="upload">
+            <div class="upload-section">
+                <h2>File Management</h2>
+                
+                <!-- Upload Areas -->
+                <div class="upload-areas">
+                    <div class="upload-card">
+                        <h3>Upload Contracts</h3>
+                        <div class="upload-area" id="contractUpload">
+                            <i class="fas fa-file-upload"></i>
+                            <p>Drag and drop contract files here or click to browse</p>
+                            <input type="file" id="contractFileInput" accept=".docx" multiple>
+                        </div>
+                    </div>
+                    <div class="upload-card">
+                        <h3>Upload Templates</h3>
+                        <div class="upload-area" id="templateUpload">
+                            <i class="fas fa-file-upload"></i>
+                            <p>Drag and drop template files here or click to browse</p>
+                            <input type="file" id="templateFileInput" accept=".docx" multiple>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- File Lists -->
+                <div class="file-lists">
+                    <div class="file-list">
+                        <h3>Uploaded Contracts</h3>
+                        <div id="contractsList" class="file-items-container">
+                            <!-- Contract files will be dynamically loaded here -->
+                        </div>
+                    </div>
+                    <div class="file-list">
+                        <h3>Available Templates</h3>
+                        <div id="templatesList" class="file-items-container">
+                            <!-- Template files will be dynamically loaded here -->
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Batch Actions -->
+                <div class="batch-actions">
+                    <h3>Batch Operations</h3>
+                    <div class="action-buttons">
+                        <button class="action-btn" onclick="analyzeAllContracts()">
+                            <i class="fas fa-search"></i>
+                            Analyze All Contracts
+                        </button>
+                        <button class="action-btn" onclick="generateBatchReports()">
+                            <i class="fas fa-file-alt"></i>
+                            Generate Batch Reports
+                        </button>
+                        <button class="action-btn warning" onclick="clearAllContracts()">
+                            <i class="fas fa-file-contract"></i>
+                            Clear All Contracts
+                        </button>
+                        <button class="action-btn danger" onclick="clearAllFiles()">
+                            <i class="fas fa-trash"></i>
+                            Clear All Files
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Prompts Tab -->
+        <div class="tab-content" id="prompts">
+            <div class="prompts-section">
+                <h2>LLM Prompt Management</h2>
+                
+                <!-- Prompt Type Selector -->
+                <div class="prompt-selector-card">
+                    <h3>Select Prompt Type</h3>
+                    <div class="prompt-type-selector">
+                        <select id="promptTypeSelect">
+                            <option value="individual_analysis">Individual Analysis</option>
+                            <option value="batch_analysis">Batch Analysis</option>
+                            <option value="ultra_fast">Ultra-Fast Mode</option>
+                        </select>
+                        <div class="prompt-info">
+                            <span id="prompt-version">Version: 1.0</span>
+                            <span id="prompt-status">Status: Active</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Prompt Editor -->
+                <div class="prompt-editor-card">
+                    <div class="editor-header">
+                        <h3>Prompt Template Editor</h3>
+                        <div class="editor-controls">
+                            <button class="action-btn" onclick="validatePrompt()">
+                                <i class="fas fa-check-circle"></i>
+                                Validate
+                            </button>
+                            <button class="action-btn" onclick="previewPrompt()">
+                                <i class="fas fa-eye"></i>
+                                Preview
+                            </button>
+                            <button class="action-btn" onclick="savePrompt()">
+                                <i class="fas fa-save"></i>
+                                Save
+                            </button>
+                            <button class="action-btn secondary" onclick="resetPrompt()">
+                                <i class="fas fa-undo"></i>
+                                Reset
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <!-- Prompt Textarea -->
+                    <div class="editor-container">
+                        <textarea id="promptEditor" rows="20" cols="100" placeholder="Loading prompt template...">
+                        </textarea>
+                        
+                        <!-- Variable Helper -->
+                        <div class="variable-helper">
+                            <h4>Available Variables:</h4>
+                            <div class="variable-tags" id="variableTags">
+                                <span class="variable-tag">{deleted_text}</span>
+                                <span class="variable-tag">{inserted_text}</span>
+                                <span class="variable-tag">{changes_text}</span>
+                            </div>
+                            <p class="helper-text">Click a variable to insert it at cursor position</p>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Validation & Preview -->
+                <div class="validation-preview-section">
+                    <div class="validation-panel">
+                        <h3>Validation Results</h3>
+                        <div id="validationResults" class="validation-content">
+                            <p class="validation-message">Click "Validate" to check your prompt</p>
+                        </div>
+                    </div>
+                    
+                    <div class="preview-panel">
+                        <h3>Preview with Sample Data</h3>
+                        <div id="promptPreview" class="preview-content">
+                            <p class="preview-message">Click "Preview" to see prompt with sample data</p>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Backup & Restore -->
+                <div class="backup-section">
+                    <h3>Backup & Restore</h3>
+                    <div class="backup-controls">
+                        <div class="backup-actions">
+                            <button class="action-btn" onclick="createBackup()">
+                                <i class="fas fa-archive"></i>
+                                Create Backup
+                            </button>
+                            <input type="text" id="backupName" placeholder="Optional backup name" class="backup-name-input">
+                        </div>
+                        
+                        <div class="restore-actions">
+                            <select id="backupList" class="backup-selector">
+                                <option value="">Select backup to restore...</option>
+                            </select>
+                            <button class="action-btn warning" onclick="restoreBackup()">
+                                <i class="fas fa-download"></i>
+                                Restore Selected
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <!-- Backup List -->
+                    <div class="backup-list" id="backupListContainer">
+                        <p class="backup-message">Available backups will appear here</p>
+                    </div>
+                </div>
+                
+                <!-- Prompt Statistics -->
+                <div class="prompt-stats-section">
+                    <h3>Prompt Statistics</h3>
+                    <div class="stats-grid" id="promptStats">
+                        <div class="stat-card">
+                            <span class="stat-label">Total Prompts</span>
+                            <span class="stat-value" id="totalPrompts">-</span>
+                        </div>
+                        <div class="stat-card">
+                            <span class="stat-label">Active Prompts</span>
+                            <span class="stat-value" id="activePrompts">-</span>
+                        </div>
+                        <div class="stat-card">
+                            <span class="stat-label">Total Backups</span>
+                            <span class="stat-value" id="totalBackups">-</span>
+                        </div>
+                        <div class="stat-card">
+                            <span class="stat-label">Last Modified</span>
+                            <span class="stat-value" id="lastModified">-</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Settings Tab -->
+        <div class="tab-content" id="settings">
+            <div class="settings-section">
+                <h2>Configuration</h2>
+                
+                <div class="settings-card">
+                    <h3>AI Model Configuration</h3>
+                    
+                    <!-- Provider Selection -->
+                    <div class="settings-group">
+                        <label for="providerSelector">LLM Provider:</label>
+                        <div class="provider-selector-container">
+                            <select id="providerSelector">
+                                <option value="openai">OpenAI (ChatGPT)</option>
+                            </select>
+                            <div class="provider-info">
+                                <span id="current-provider">OpenAI</span>
+                                <span class="health-indicator connected" id="provider-health">●</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- OpenAI Model Selection -->
+                    <div class="settings-group" id="openai-settings">
+                        <label for="openaiModel">OpenAI Model:</label>
+                        <div class="model-selector-container">
+                            <select id="openaiModel">
+                                <option value="">Loading OpenAI models...</option>
+                            </select>
+                            <button type="button" id="refreshModels" class="btn-secondary">↻ Refresh</button>
+                        </div>
+                        <div id="model-description" class="model-description">
+                            Select a model to see its description and capabilities
+                        </div>
+                    </div>
+                    
+                    <!-- Model Settings -->
+                    <div class="settings-group">
+                        <label>Model Settings:</label>
+                        <div class="model-settings-grid">
+                            <div class="setting-item">
+                                <label for="temperatureSlider">Temperature:</label>
+                                <div class="slider-container">
+                                    <input type="range" id="temperatureSlider" min="0" max="2" step="0.1" value="0.1">
+                                    <span id="temperatureValue">0.1</span>
+                                </div>
+                            </div>
+                            <div class="setting-item">
+                                <label for="maxTokensInput">Max Tokens:</label>
+                                <input type="number" id="maxTokensInput" min="1" max="4096" value="1024">
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Current Model Info -->
+                    <div class="settings-group">
+                        <label>Current Model Status:</label>
+                        <div id="current-model-info" class="model-status">
+                            <div class="status-item">
+                                <span class="status-label">Model:</span>
+                                <span id="status-model">Loading...</span>
+                            </div>
+                            <div class="status-item">
+                                <span class="status-label">Status:</span>
+                                <span id="status-connection">Connecting...</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Report Format -->
+                    <div class="settings-group">
+                        <label>Report Format:</label>
+                        <div class="checkbox-group">
+                            <label><input type="checkbox" id="generateDocx" checked> Word Document (.docx)</label>
+                            <label><input type="checkbox" id="generateXlsx" checked> Excel Spreadsheet (.xlsx)</label>
+                            <label><input type="checkbox" id="generatePdf" checked> PDF Report (.pdf)</label>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="settings-card">
+                    <h3>Security Settings</h3>
+                    <div class="settings-group">
+                        <label>Max File Size:</label>
+                        <input type="number" id="maxFileSize" value="16"> MB
+                    </div>
+                    <div class="settings-group">
+                        <label>Enable Audit Logging:</label>
+                        <input type="checkbox" id="auditLogging" checked>
+                    </div>
+                </div>
+
+                <div class="settings-card">
+                    <h3>Cache Management</h3>
+                    <div class="settings-group">
+                        <div id="cacheStats" class="cache-stats-container">
+                            <p>Loading cache statistics...</p>
+                        </div>
+                    </div>
+                    <div class="settings-group">
+                        <label>Clear Cache:</label>
+                        <div class="button-group">
+                            <button class="btn btn-warning" onclick="clearCache('analysis')" title="Clear analysis results and reports">
+                                <i class="fas fa-trash"></i> Clear Analysis
+                            </button>
+                            <button class="btn btn-warning" onclick="clearCache('reports')" title="Clear generated reports only">
+                                <i class="fas fa-file-alt"></i> Clear Reports
+                            </button>
+                            <button class="btn btn-warning" onclick="clearCache('memory')" title="Clear in-memory cache only">
+                                <i class="fas fa-memory"></i> Clear Memory
+                            </button>
+                            <button class="btn btn-danger" onclick="clearCache('all')" title="Clear all cached data">
+                                <i class="fas fa-trash-alt"></i> Clear All
+                            </button>
+                        </div>
+                    </div>
+                    <div class="settings-group">
+                        <button class="btn btn-primary" onclick="refreshDashboard()" title="Refresh dashboard data">
+                            <i class="fas fa-sync"></i> Refresh Dashboard
+                        </button>
+                        <button class="btn btn-secondary" onclick="loadCacheStats()" title="Refresh cache statistics">
+                            <i class="fas fa-chart-bar"></i> Refresh Stats
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Upload Modal -->
+    <div class="modal" id="uploadModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Upload Contract</h3>
+                <button class="close-btn" onclick="closeUploadModal()">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="modal-body">
+                <div class="upload-zone">
+                    <i class="fas fa-cloud-upload-alt"></i>
+                    <p>Drag and drop your contract file here</p>
+                    <p>or</p>
+                    <button class="browse-btn" onclick="document.getElementById('modalFileInput').click()">
+                        Browse Files
+                    </button>
+                    <input type="file" id="modalFileInput" accept=".docx" style="display: none;">
+                </div>
+                <div class="upload-progress" id="uploadProgress" style="display: none;">
+                    <div class="progress-bar">
+                        <div class="progress-fill"></div>
+                    </div>
+                    <p class="progress-text">Uploading...</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Report Generation Modal -->
+    <div class="modal" id="reportModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Generate Reports</h3>
+                <button class="close-btn" onclick="closeReportModal()">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="modal-body">
+                <div class="report-options">
+                    <h4>Select Report Types to Generate:</h4>
+                    <div class="report-type-grid">
+                        <div class="report-type-card">
+                            <div class="report-icon">
+                                <i class="fas fa-file-word"></i>
+                            </div>
+                            <h5>Redlined Document</h5>
+                            <p>Word format with track changes</p>
+                            <label><input type="checkbox" id="generateReviewDoc" checked> Generate .docx</label>
+                        </div>
+                        <div class="report-type-card">
+                            <div class="report-icon">
+                                <i class="fas fa-table"></i>
+                            </div>
+                            <h5>Changes Table</h5>
+                            <p>Structured comparison table</p>
+                            <label><input type="checkbox" id="generateChangesTable" checked> Generate .xlsx</label>
+                            <label><input type="checkbox" id="generateChangesTableDocx"> Generate .docx</label>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-actions">
+                    <button class="action-btn" onclick="closeReportModal()">Cancel</button>
+                    <button class="action-btn primary" onclick="generateSelectedReports()">Generate Reports</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="{{ url_for('static', filename='js/dashboard.js') }}"></script>
+</body>
+</html> 

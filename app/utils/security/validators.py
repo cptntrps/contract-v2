@@ -46,7 +46,15 @@ class ContentValidationError(SecurityError):
 
 class SecurityValidator:
     """
-    Comprehensive security validator for file uploads and user input
+    Comprehensive security validator for file uploads and user input.
+    
+    Purpose: Centralized security validation for all user inputs and file uploads.
+    Provides defense-in-depth validation including filename sanitization,
+    content type verification, path traversal protection, and input sanitization.
+    
+    AI Context: Critical security component that must be used for all user inputs.
+    If security issues arise, review validation rules and ensure all endpoints
+    use proper validation. This class prevents common attack vectors.
     """
     
     def __init__(self, config=None):
@@ -155,16 +163,29 @@ class SecurityValidator:
     
     def validate_file_content(self, file_storage: FileStorage) -> Dict[str, Any]:
         """
-        Validate file content and metadata
+        Validate file content and metadata with comprehensive security checks.
+        
+        Purpose: Multi-layered file validation including size limits, MIME type
+        verification, filename sanitization, and content integrity checks.
+        Prevents upload of malicious files and ensures processing safety.
         
         Args:
             file_storage: Uploaded file object
             
         Returns:
-            Validation results dictionary
+            Validation results dictionary containing:
+            - original_filename: Original uploaded name
+            - validated_filename: Sanitized filename
+            - file_size: File size in bytes
+            - mime_type: Detected MIME type
+            - file_hash: SHA-256 hash for integrity
             
         Raises:
             FileValidationError: If file fails validation
+            
+        AI Context: Primary file upload security gateway. If file uploads are
+        being rejected, check validation logic here. All uploaded files must
+        pass through this validation before processing.
         """
         if not file_storage:
             raise FileValidationError("No file provided")

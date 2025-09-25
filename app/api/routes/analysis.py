@@ -5,13 +5,17 @@ Handles contract analysis operations and results.
 """
 
 import os
+from datetime import datetime
 from pathlib import Path
 from flask import Blueprint, request, jsonify, current_app
 
 from ...core.services.analyzer import create_contract_analyzer, ContractAnalysisError
+from ...core.services.template_matching_service import TemplateMatchingService
 from ...core.models.contract import Contract
 from ...utils.security.audit import SecurityAuditor
 from ...utils.logging.setup import get_logger
+from ...utils.errors.exceptions import ValidationError, NotFoundError
+from ...utils.errors.validators import ValidationHandler
 
 # Import contracts store from contracts routes
 from .contracts import contracts_store
@@ -22,102 +26,48 @@ analysis_bp = Blueprint('analysis', __name__)
 # Initialize security auditor
 security_auditor = SecurityAuditor()
 
+
+@analysis_bp.route('/debug/routes')
+def debug_routes():
+    """Debug endpoint to list all registered routes"""
+    from flask import current_app
+    
+    routes = []
+    for rule in current_app.url_map.iter_rules():
+        methods = ','.join(rule.methods - {'HEAD', 'OPTIONS'})
+        routes.append({
+            'endpoint': rule.endpoint,
+            'methods': methods,
+            'rule': str(rule)
+        })
+    
+    # Filter for our API routes
+    api_routes = [r for r in routes if '/api/' in r['rule']]
+    
+    return jsonify({
+        'success': True,
+        'total_routes': len(routes),
+        'api_routes': len(api_routes),
+        'routes': api_routes
+    })
+
+
+@analysis_bp.route('/debug/test')
+def debug_test():
+    """Simple test endpoint to verify blueprint is working"""
+    return jsonify({
+        'success': True,
+        'message': 'Analysis blueprint is working',
+        'timestamp': datetime.now().isoformat()
+    })
+
+
 # Store analysis results (in production, use database)
 analysis_results_store = {}
 
 
-def find_best_template(contract):
-    """
-    Find the best matching template based on intelligent matching rules:
-    1. Vendor-specific: Capgemini, Blue Optima, EPAM
-    2. Document type: SOW vs Change Order
-    3. Similarity-based: Best match across all templates
-    """
-    from pathlib import Path
-    from flask import current_app
-    from ...core.services.document_processor import DocumentProcessor
-    
-    templates_dir = Path(current_app.config.get('TEMPLATES_FOLDER', 'data/templates'))
-    template_files = list(templates_dir.glob('*.docx'))
-    
-    if not template_files:
-        return None
-    
-    # Read contract content
-    doc_processor = DocumentProcessor()
-    try:
-        contract_content = doc_processor.extract_text_from_docx(contract.file_path)
-        contract_content_lower = contract_content.lower()
-    except Exception as e:
-        logger.error(f"Error reading contract content: {e}")
-        return str(template_files[0])  # Fallback to first template
-    
-    # Rule 1: Vendor-specific matching
-    vendor_templates = {
-        'capgemini': 'VENDOR_CAPGEMINI_SOW_v1.docx',
-        'blue optima': 'VENDOR_BLUEOPTIMA_SOW_v1.docx',
-        'blueoptima': 'VENDOR_BLUEOPTIMA_SOW_v1.docx',
-        'epam': 'VENDOR_EPAM_SOW_v1.docx'
-    }
-    
-    for vendor, template_name in vendor_templates.items():
-        if vendor in contract_content_lower:
-            template_path = templates_dir / template_name
-            if template_path.exists():
-                logger.info(f"Selected vendor template: {template_name} (found '{vendor}' in contract)")
-                return str(template_path)
-    
-    # Rule 2: Document type matching
-    sow_keywords = ['statement of work', 'sow', 'scope of work', 'work statement', 'services agreement']
-    co_keywords = ['change order', 'change request', 'amendment', 'modification', 'addendum']
-    
-    sow_count = sum(1 for keyword in sow_keywords if keyword in contract_content_lower)
-    co_count = sum(1 for keyword in co_keywords if keyword in contract_content_lower)
-    
-    if sow_count > co_count and sow_count > 0:
-        # Prefer SOW template
-        sow_template = templates_dir / 'TYPE_SOW_Standard_v1.docx'
-        if sow_template.exists():
-            logger.info(f"Selected SOW template: found {sow_count} SOW keywords")
-            return str(sow_template)
-    elif co_count > 0:
-        # Prefer Change Order template
-        co_template = templates_dir / 'TYPE_CHANGEORDER_Standard_v1.docx'
-        if co_template.exists():
-            logger.info(f"Selected Change Order template: found {co_count} CO keywords")
-            return str(co_template)
-    
-    # Rule 3: Similarity-based matching against all templates
-    logger.info("No specific vendor/type match found, using similarity-based matching")
-    
-    from ...core.services.comparison_engine import ComparisonEngine
-    comparison_engine = ComparisonEngine()
-    
-    best_template = None
-    best_similarity = 0.0
-    
-    for template_file in template_files:
-        try:
-            template_content = doc_processor.extract_text_from_docx(str(template_file))
-            similarity = comparison_engine.calculate_similarity(contract_content, template_content)
-            
-            logger.debug(f"Template {template_file.name}: similarity = {similarity:.3f}")
-            
-            if similarity > best_similarity:
-                best_similarity = similarity
-                best_template = str(template_file)
-                
-        except Exception as e:
-            logger.warning(f"Error processing template {template_file}: {e}")
-            continue
-    
-    if best_template:
-        logger.info(f"Selected best matching template: {Path(best_template).name} (similarity: {best_similarity:.3f})")
-        return best_template
-    
-    # Fallback to first available template
-    logger.warning("No suitable template found, using first available template")
-    return str(template_files[0])
+# Business logic moved to app/core/services/template_matching_service.py
+# This route file now contains only HTTP concerns
 
 
 @analysis_bp.route('/analysis')
@@ -206,20 +156,29 @@ def analyze_contract():
                 'error': 'Contract ID is required'
             }), 400
         
+        logger.debug(f"Analyzing contract with ID: {contract_id}")
+        
         # Validate contract ID using enhanced validation
         try:
             validated_contract_id = ValidationHandler.validate_contract_id(contract_id)
+            logger.debug(f"Contract ID validated: {validated_contract_id}")
         except ValidationError as e:
+            logger.warning(f"Contract ID validation failed: {e}")
             raise e
         
         # Check if contract exists
+        logger.debug(f"Checking if contract {validated_contract_id} exists in store")
+        logger.debug(f"Available contracts in store: {list(contracts_store.keys())}")
+        
         if validated_contract_id not in contracts_store:
+            logger.warning(f"Contract {validated_contract_id} not found in store")
             raise NotFoundError("contract", validated_contract_id)
         
         # Get contract
-        contract = contracts_store[contract_id]
+        contract = contracts_store[validated_contract_id]
+        logger.debug(f"Retrieved contract: {contract.get_display_name()}")
         
-        logger.info(f"Starting contract analysis for: {contract_id}")
+        logger.info(f"Starting contract analysis for: {validated_contract_id}")
         
         # Import required modules for analysis
         from pathlib import Path
@@ -238,29 +197,62 @@ def analyze_contract():
                 'include_llm_analysis': True,
                 'batch_size': 10,
                 'similarity_threshold': 0.7
-            }
+            },
+            'nlp_settings': {}  # Add for semantic analysis
         }
         
-        analyzer = create_contract_analyzer(config)
+        logger.debug("Creating contract analyzer...")
+        try:
+            analyzer = create_contract_analyzer(config)
+            logger.debug(f"Analyzer created successfully: {type(analyzer)}")
+        except Exception as e:
+            logger.error(f"Error creating analyzer: {e}")
+            return jsonify({
+                'success': False,
+                'error': f'Analyzer initialization failed: {str(e)}'
+            }), 500
         
         # Find the best matching template using intelligent matching
-        template_path = find_best_template(contract)
+        logger.debug("Finding best template match...")
+        try:
+            template_matching_service = TemplateMatchingService()
+            template_path = template_matching_service.find_best_template(contract)
+            logger.debug(f"Template finding completed, result: {template_path}")
+        except Exception as e:
+            logger.error(f"Error finding template: {e}")
+            return jsonify({
+                'success': False,
+                'error': f'Template selection failed: {str(e)}'
+            }), 500
         
         if not template_path:
+            logger.warning("No suitable template found")
             return jsonify({
                 'success': False,
                 'error': 'No suitable template found'
             }), 404
         
         # Mark contract as processing
+        logger.debug("Marking contract as processing...")
         contract.mark_processing()
         
         # Perform the actual analysis
-        analysis_result = analyzer.analyze_contract(
-            contract=contract,
-            template_path=template_path,
-            include_llm_analysis=True
-        )
+        logger.info(f"Starting contract analysis - Template: {Path(template_path).name}")
+        try:
+            analysis_result = analyzer.analyze_contract(
+                contract=contract,
+                template_path=template_path,
+                include_llm_analysis=False  # Disable LLM for debugging, focus on semantic analysis
+            )
+            logger.debug(f"Analysis completed successfully - Changes: {analysis_result.total_changes}")
+        except Exception as e:
+            logger.error(f"Contract analysis failed: {e}")
+            import traceback
+            logger.error(f"Analysis error traceback: {traceback.format_exc()}")
+            return jsonify({
+                'success': False,
+                'error': f'Analysis execution failed: {str(e)}'
+            }), 500
         
         # Get template name from path
         template_name = Path(template_path).name
@@ -304,11 +296,34 @@ def analyze_contract():
             'message': 'Contract analyzed successfully'
         }), 200
         
-    except Exception as e:
-        logger.error(f"Error in analyze contract endpoint: {e}")
+    except ValidationError as e:
+        logger.warning(f"Validation error in analyze contract: {e}")
         return jsonify({
             'success': False,
-            'error': f'Failed to analyze contract: {str(e)}'
+            'error': f'Validation error: {str(e)}'
+        }), 400
+    except NotFoundError as e:
+        logger.warning(f"Contract not found in analyze contract: {e}")
+        return jsonify({
+            'success': False,
+            'error': f'Contract not found: {str(e)}'
+        }), 404
+    except ContractAnalysisError as e:
+        logger.error(f"Contract analysis error: {e}")
+        return jsonify({
+            'success': False,
+            'error': f'Analysis failed: {str(e)}'
+        }), 500
+    except Exception as e:
+        import traceback
+        error_trace = traceback.format_exc()
+        logger.error(f"Unexpected error in analyze contract endpoint: {e}")
+        logger.error(f"Full traceback: {error_trace}")
+        
+        return jsonify({
+            'success': False,
+            'error': f'Failed to analyze contract: {str(e)}',
+            'debug_info': error_trace if current_app.debug else None
         }), 500
 
 

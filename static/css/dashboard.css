@@ -3033,4 +3033,435 @@ body {
     .editor-controls {
         justify-content: center;
     }
+}
+
+/* ============================================================================
+   MODULAR COMPONENTS STYLES
+   ============================================================================ */
+
+/* Notification System Styles */
+.notification-container {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    z-index: 9999;
+    max-width: 400px;
+    pointer-events: none;
+}
+
+.notification {
+    background: white;
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    margin-bottom: 10px;
+    padding: 0;
+    opacity: 0;
+    transform: translateX(100%);
+    transition: all 0.3s ease;
+    pointer-events: all;
+    border-left: 4px solid #007bff;
+    overflow: hidden;
+}
+
+.notification.show {
+    opacity: 1;
+    transform: translateX(0);
+}
+
+.notification.closing {
+    opacity: 0;
+    transform: translateX(100%);
+    margin-bottom: 0;
+    max-height: 0;
+    padding: 0;
+}
+
+.notification-success {
+    border-left-color: #28a745;
+}
+
+.notification-error {
+    border-left-color: #dc3545;
+}
+
+.notification-warning {
+    border-left-color: #ffc107;
+}
+
+.notification-info {
+    border-left-color: #007bff;
+}
+
+.notification-content {
+    display: flex;
+    align-items: center;
+    padding: 15px 20px;
+    gap: 10px;
+}
+
+.notification-icon {
+    font-size: 1.2em;
+    flex-shrink: 0;
+}
+
+.notification-success .notification-icon {
+    color: #28a745;
+}
+
+.notification-error .notification-icon {
+    color: #dc3545;
+}
+
+.notification-warning .notification-icon {
+    color: #ffc107;
+}
+
+.notification-info .notification-icon {
+    color: #007bff;
+}
+
+.notification-message {
+    flex: 1;
+    font-size: 0.95em;
+    line-height: 1.4;
+    color: #333;
+}
+
+.notification-close {
+    background: none;
+    border: none;
+    color: #999;
+    cursor: pointer;
+    padding: 5px;
+    margin: -5px;
+    border-radius: 50%;
+    transition: all 0.2s ease;
+    flex-shrink: 0;
+}
+
+.notification-close:hover {
+    background: #f5f5f5;
+    color: #666;
+}
+
+.notification-actions {
+    padding: 0 20px 15px;
+    display: flex;
+    gap: 10px;
+    justify-content: flex-end;
+    border-top: 1px solid #e9ecef;
+    margin-top: 10px;
+    padding-top: 10px;
+}
+
+.notification-action {
+    padding: 6px 12px;
+    border: 1px solid #ddd;
+    background: white;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 0.85em;
+    transition: all 0.2s ease;
+}
+
+.notification-action.primary {
+    background: #007bff;
+    color: white;
+    border-color: #007bff;
+}
+
+.notification-action:hover {
+    background: #f8f9fa;
+    border-color: #adb5bd;
+}
+
+.notification-action.primary:hover {
+    background: #0056b3;
+    border-color: #0056b3;
+}
+
+/* Upload Progress Styles */
+.upload-progress-container {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    z-index: 9998;
+    max-width: 350px;
+}
+
+.upload-progress-item {
+    background: white;
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    padding: 15px;
+    margin-bottom: 10px;
+    border-left: 4px solid #007bff;
+}
+
+.progress-info {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 10px;
+}
+
+.progress-info i {
+    color: #007bff;
+    font-size: 1.1em;
+}
+
+.filename {
+    font-weight: 500;
+    color: #333;
+    font-size: 0.9em;
+}
+
+.progress-bar {
+    background: #e9ecef;
+    border-radius: 4px;
+    height: 6px;
+    margin-bottom: 8px;
+    overflow: hidden;
+}
+
+.progress-fill {
+    background: linear-gradient(90deg, #007bff, #28a745);
+    height: 100%;
+    transition: width 0.3s ease;
+    border-radius: 4px;
+}
+
+.progress-status {
+    font-size: 0.85em;
+    color: #666;
+    text-align: center;
+}
+
+/* Enhanced File Items */
+.file-item {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    padding: 15px;
+    background: white;
+    border: 1px solid #e9ecef;
+    border-radius: 8px;
+    margin-bottom: 10px;
+    transition: all 0.2s ease;
+}
+
+.file-item:hover {
+    border-color: #007bff;
+    box-shadow: 0 2px 8px rgba(0, 123, 255, 0.1);
+}
+
+.file-icon {
+    font-size: 2em;
+    color: #007bff;
+    flex-shrink: 0;
+    width: 40px;
+    text-align: center;
+}
+
+.file-info {
+    flex: 1;
+    min-width: 0;
+}
+
+.file-name {
+    font-weight: 500;
+    color: #333;
+    margin-bottom: 4px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.file-details {
+    font-size: 0.85em;
+    color: #666;
+    margin-bottom: 2px;
+}
+
+.file-date {
+    font-size: 0.8em;
+    color: #999;
+}
+
+.file-actions {
+    display: flex;
+    gap: 5px;
+    flex-shrink: 0;
+}
+
+/* Empty State Styles */
+.empty-state {
+    text-align: center;
+    padding: 40px 20px;
+    color: #666;
+}
+
+.empty-state i {
+    display: block;
+    margin-bottom: 15px;
+    opacity: 0.5;
+}
+
+.empty-state h4 {
+    margin-bottom: 8px;
+    color: #333;
+}
+
+.empty-state p {
+    margin-bottom: 5px;
+}
+
+.empty-state small {
+    opacity: 0.8;
+}
+
+/* Loading States */
+.loading-spinner {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    color: #666;
+}
+
+.loading-spinner.small {
+    font-size: 0.85em;
+}
+
+.loading-spinner.medium {
+    font-size: 1em;
+}
+
+.loading-spinner.large {
+    font-size: 1.2em;
+}
+
+.loading {
+    opacity: 0.6;
+    pointer-events: none;
+}
+
+/* Enhanced Status Indicators */
+.status-connected {
+    color: #28a745;
+}
+
+.status-disconnected {
+    color: #dc3545;
+}
+
+.health-indicator {
+    display: inline-block;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    margin-right: 8px;
+}
+
+.health-healthy {
+    background-color: #28a745;
+}
+
+.health-unhealthy {
+    background-color: #dc3545;
+}
+
+/* Responsive Enhancements for Modules */
+@media (max-width: 768px) {
+    .notification-container {
+        left: 10px;
+        right: 10px;
+        max-width: none;
+    }
+    
+    .notification {
+        margin-bottom: 8px;
+    }
+    
+    .notification-content {
+        padding: 12px 15px;
+    }
+    
+    .upload-progress-container {
+        left: 10px;
+        right: 10px;
+        max-width: none;
+    }
+    
+    .file-item {
+        padding: 12px;
+        gap: 12px;
+    }
+    
+    .file-icon {
+        font-size: 1.5em;
+        width: 30px;
+    }
+    
+    .file-actions {
+        flex-direction: column;
+        gap: 8px;
+    }
+}
+
+/* Debug Styles (for development) */
+.debug-info {
+    position: fixed;
+    bottom: 10px;
+    left: 10px;
+    background: rgba(0, 0, 0, 0.8);
+    color: white;
+    padding: 10px;
+    border-radius: 4px;
+    font-family: monospace;
+    font-size: 0.8em;
+    z-index: 10000;
+    max-width: 300px;
+    display: none;
+}
+
+.debug-info.visible {
+    display: block;
+}
+
+/* Accessibility Enhancements */
+@media (prefers-reduced-motion: reduce) {
+    .notification,
+    .notification.show,
+    .notification.closing,
+    .upload-progress-item,
+    .file-item {
+        transition: none;
+    }
+    
+    .progress-fill {
+        transition: none;
+    }
+}
+
+/* High Contrast Mode Support */
+@media (prefers-contrast: high) {
+    .notification {
+        border: 2px solid;
+    }
+    
+    .notification-success {
+        border-color: #28a745;
+    }
+    
+    .notification-error {
+        border-color: #dc3545;
+    }
+    
+    .notification-warning {
+        border-color: #ffc107;
+    }
+    
+    .notification-info {
+        border-color: #007bff;
+    }
 } 

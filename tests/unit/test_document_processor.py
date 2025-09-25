@@ -1,49 +1,90 @@
 """
-Unit tests for DocumentProcessor service
+Test document processor functionality
 """
-
 import pytest
 from unittest.mock import Mock, patch, mock_open
 from pathlib import Path
 import tempfile
 import os
 
-from app.core.services.document_processor import DocumentProcessor
+from app.core.services.document_processor import DocumentProcessor, DocumentProcessingError as ProcessingError
 
 
 class TestDocumentProcessor:
-    """Test suite for DocumentProcessor service"""
-
-    def test_init(self):
-        """Test processor initialization"""
-        processor = DocumentProcessor()
-        assert processor is not None
-
-    def test_extract_text_from_docx_success(self, test_docx_file):
-        """Test successful text extraction from DOCX file"""
-        processor = DocumentProcessor()
-        text = processor.extract_text_from_docx(str(test_docx_file))
+    """Test DocumentProcessor functionality"""
+    
+    @pytest.fixture
+    def processor(self):
+        """Create document processor instance"""
+        return DocumentProcessor()
+    
+    @pytest.fixture
+    def sample_file_data(self):
+        """Sample file data for testing"""
+        return {
+            'docx_content': b'\x50\x4b\x03\x04\x14\x00\x06\x00',  # DOCX signature
+            'pdf_content': b'%PDF-1.4',  # PDF signature
+            'txt_content': b'This is a test document with some text content.',
+            'invalid_content': b'\x00\x01\x02\x03'
+        }
+    
+    def test_extract_text_from_docx(self, processor, sample_file_data, tmp_path):
+        """Test text extraction from DOCX files"""
+        # Create temporary DOCX file
+        test_file = tmp_path / "test.docx"
+        test_file.write_bytes(sample_file_data['docx_content'])
         
-        assert isinstance(text, str)
-        assert len(text) > 0
-        assert 'Test Contract' in text
+        with patch('app.core.services.document_processor.Document') as mock_doc:
+            mock_doc.return_value.paragraphs = [
+                Mock(text="First paragraph"),
+                Mock(text="Second paragraph")
+            ]
+            
+            result = processor.extract_text_from_file(str(test_file))
+            
+            assert isinstance(result, str)
+            assert "First paragraph" in result
+            assert "Second paragraph" in result
 
-    def test_extract_text_from_docx_file_not_found(self):
-        """Test text extraction with non-existent file"""
-        processor = DocumentProcessor()
-        text = processor.extract_text_from_docx('nonexistent.docx')
-        assert text == ""
-
-    def test_extract_text_from_docx_invalid_file(self, tmp_path):
-        """Test text extraction with invalid DOCX file"""
-        processor = DocumentProcessor()
+    def test_extract_text_from_pdf(self, processor, sample_file_data, tmp_path):
+        """Test text extraction from PDF files"""
+        test_file = tmp_path / "test.pdf"
+        test_file.write_bytes(sample_file_data['pdf_content'])
         
-        # Create a text file with .docx extension
-        invalid_file = tmp_path / "invalid.docx"
-        invalid_file.write_text("This is not a valid DOCX file")
+        with patch('app.core.services.document_processor.PdfReader') as mock_reader:
+            mock_page = Mock()
+            mock_page.extract_text.return_value = "PDF text content"
+            mock_reader.return_value.pages = [mock_page]
+            
+            result = processor.extract_text_from_file(str(test_file))
+            
+            assert result == "PDF text content"
+    
+    def test_extract_text_from_txt(self, processor, sample_file_data, tmp_path):
+        """Test text extraction from TXT files"""
+        test_file = tmp_path / "test.txt"
+        test_file.write_bytes(sample_file_data['txt_content'])
         
-        text = processor.extract_text_from_docx(str(invalid_file))
-        assert text == ""
+        result = processor.extract_text_from_file(str(test_file))
+        
+        assert result == "This is a test document with some text content."
+    
+    def test_extract_text_unsupported_format(self, processor, tmp_path):
+        """Test error handling for unsupported file formats"""
+        test_file = tmp_path / "test.xyz"
+        test_file.write_text("Some content")
+        
+        with pytest.raises(Exception) as exc_info:
+            processor.extract_text_from_file(str(test_file))
+        
+        assert "Unsupported file format" in str(exc_info.value)
+    
+    def test_extract_text_nonexistent_file(self, processor):
+        """Test error handling for nonexistent files"""
+        with pytest.raises(Exception) as exc_info:
+            processor.extract_text_from_file("nonexistent.docx")
+        
+        assert "File not found" in str(exc_info.value)
 
     def test_extract_text_from_docx_empty_document(self):
         """Test text extraction from empty document"""

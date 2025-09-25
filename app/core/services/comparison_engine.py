@@ -36,12 +36,20 @@ class ComparisonEngine:
         """
         Calculate similarity between two texts using SequenceMatcher.
         
+        Purpose: Provides quantitative similarity measure between template and
+        contract documents. Used for template matching and overall change assessment.
+        Higher scores indicate more similar documents.
+        
         Args:
-            text1: Original text
-            text2: Modified text
+            text1: Original text (template)
+            text2: Modified text (contract)
             
         Returns:
-            Similarity ratio (0.0 to 1.0)
+            Similarity ratio (0.0 to 1.0) where 1.0 is identical
+            
+        AI Context: Primary similarity calculation for template matching.
+        If similarity scores seem incorrect, debug here. Uses Python difflib
+        SequenceMatcher which provides reliable ratio calculations.
         """
         try:
             if not text1 and not text2:
@@ -104,12 +112,25 @@ class ComparisonEngine:
         """
         Find detailed changes with context and position information.
         
+        Purpose: Comprehensive change detection with full context for LLM analysis.
+        Provides detailed change information including surrounding text context
+        which is essential for accurate change classification.
+        
         Args:
             text1: Original text (template)
             text2: Modified text (contract)
             
         Returns:
-            List of detailed change dictionaries
+            List of detailed change dictionaries containing:
+            - operation: Change type (insert/delete/replace)
+            - deleted_text: Content that was removed
+            - inserted_text: Content that was added
+            - context_before/after: Surrounding text for context
+            - position information: Line numbers and ranges
+            
+        AI Context: Core change detection engine for contract analysis.
+        If changes are not being detected correctly, debug here. Provides
+        the structured change data that feeds into LLM classification.
         """
         try:
             changes = []

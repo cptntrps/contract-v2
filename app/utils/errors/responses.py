@@ -35,7 +35,7 @@ class ErrorResponse:
         """
         response = {
             'success': False,
-            'timestamp': datetime.utcnow().isoformat(),
+            'timestamp': datetime.now().isoformat(),
             'status_code': status_code
         }
         
@@ -158,6 +158,7 @@ def create_error_response(error: Exception, status_code: int = None) -> tuple:
 def handle_database_error(error: Exception) -> tuple:
     """Handle database-specific errors"""
     from sqlalchemy.exc import IntegrityError, OperationalError, InvalidRequestError
+    from .exceptions import DatabaseError
     
     if isinstance(error, IntegrityError):
         return create_error_response(

@@ -1,11 +1,28 @@
 """
-Custom exception classes for contract analyzer application
+Custom exception classes for contract analyzer application.
+
+Provides structured exception hierarchy with detailed error information
+for comprehensive error handling and debugging throughout the application.
+
+AI Context: These exceptions provide structured error information for debugging.
+When errors occur, check the exception details dictionary for specific context
+about what failed and why.
 """
 from typing import Any, Dict, Optional
 
 
 class ContractAnalyzerError(Exception):
-    """Base exception for all contract analyzer errors"""
+    """
+    Base exception for all contract analyzer errors.
+    
+    Purpose: Provides structured error handling with error codes, messages,
+    and detailed context. All application exceptions inherit from this base
+    to ensure consistent error reporting and debugging information.
+    
+    AI Context: Base class for all application errors. Provides standardized
+    error structure with details dictionary for debugging context. Check
+    the to_dict() method output for comprehensive error information.
+    """
     
     def __init__(self, message: str, error_code: str = None, details: Dict[str, Any] = None):
         super().__init__(message)
@@ -143,3 +160,12 @@ class ReportGenerationError(ContractAnalyzerError):
             'report_type': report_type,
             'analysis_id': analysis_id
         })
+
+
+class TaskError(ContractAnalyzerError):
+    """Raised when async task operations fail"""
+    
+    def __init__(self, task_type: str, message: str = None, **kwargs):
+        msg = message or f"Task operation failed: {task_type}"
+        super().__init__(msg, **kwargs)
+        self.details['task_type'] = task_type

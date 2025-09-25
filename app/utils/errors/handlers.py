@@ -241,13 +241,8 @@ class ErrorHandler:
             )
             
             # Return appropriate response based on environment
-            if current_app.debug:
-                return create_error_response(error, 500)
-            else:
-                return create_error_response(
-                    ContractAnalyzerError("An unexpected error occurred"),
-                    500
-                )
+            # Temporarily always show debug info to diagnose upload issues
+            return create_error_response(error, 500)
 
 
 def register_error_handlers(app: Flask, auditor: SecurityAuditor = None) -> ErrorHandler:

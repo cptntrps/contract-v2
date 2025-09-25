@@ -18,6 +18,14 @@ logger = get_logger(__name__)
 class Contract:
     """
     Contract domain entity representing an uploaded contract document.
+    
+    Purpose: Central domain model that encapsulates all contract-related data
+    and business logic. Manages contract lifecycle from upload through analysis
+    completion, including status tracking and metadata management.
+    
+    AI Context: This is the primary contract entity throughout the system.
+    All contract operations reference this model. If contract data is
+    inconsistent, debug the status transitions and metadata updates here.
     """
     
     # Core identification
@@ -105,13 +113,21 @@ class Contract:
         risk_level: str
     ):
         """
-        Mark contract as analyzed with results
+        Mark contract as analyzed with results and update analysis metadata.
+        
+        Purpose: Completes the contract analysis lifecycle by recording final
+        results and transitioning status. This is the definitive point where
+        analysis results are committed to the contract entity.
         
         Args:
             template_used: Template filename used for analysis
             changes_count: Number of changes detected
             similarity_score: Similarity score (0.0 to 1.0)
-            risk_level: Risk assessment level
+            risk_level: Risk assessment level (LOW/MEDIUM/HIGH)
+            
+        AI Context: Critical state transition function. Called after successful
+        analysis completion. If contracts are stuck in 'processing' status,
+        check if this method is being called after analysis.
         """
         self.status = "analyzed"
         self.template_used = template_used
@@ -156,7 +172,19 @@ class Contract:
         return self.original_filename or self.filename
     
     def get_summary(self) -> Dict[str, Any]:
-        """Get contract summary for API responses"""
+        """
+        Get contract summary for API responses and UI display.
+        
+        Purpose: Provides standardized contract information for frontend consumption.
+        Formats data appropriately for dashboard display and API responses,
+        including calculated fields like age and percentage scores.
+        
+        Returns:
+            Dictionary with formatted contract information for UI display
+            
+        AI Context: Primary data transformation for frontend. If dashboard
+        shows incorrect contract information, debug the field calculations here.
+        """
         return {
             "id": self.id,
             "filename": self.get_display_name(),

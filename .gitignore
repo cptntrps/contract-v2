@@ -91,3 +91,15 @@ output/coverage/
 # Test artifacts
 .pytest_cache/
 output/test-results/
+# Consolidation artifacts
+*_CONSOLIDATION_SUMMARY.md
+*_ORGANIZATION_SUMMARY.md
+codebase_analysis.json
+
+# Temporary test files
+tests/**/*.tmp
+tests/**/*.log
+
+# Script outputs
+scripts/**/*.log
+scripts/**/*.tmp

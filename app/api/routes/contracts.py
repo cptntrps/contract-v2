@@ -13,7 +13,7 @@ from werkzeug.utils import secure_filename
 
 from ...core.models.contract import Contract, validate_contract_file
 from ...utils.security.validators import SecurityValidator
-from ...utils.security.audit import SecurityAuditor
+from ...utils.security.audit import SecurityAuditor, SecurityEventType
 from ...utils.logging.setup import get_logger
 from ...utils.errors.exceptions import ValidationError, NotFoundError, DatabaseError
 from ...utils.errors.validators import ValidationHandler, validate_schema, ContractUploadSchema
@@ -28,9 +28,6 @@ security_auditor = SecurityAuditor()
 
 # Database repositories
 from ...database.repositories import ContractRepository
-
-# Initialize repository
-contract_repository = ContractRepository()
 
 # Legacy in-memory store (for migration compatibility)
 contracts_store = {}
@@ -106,6 +103,7 @@ def list_contracts():
     """List all uploaded contracts with metadata"""
     try:
         # Get contracts from database
+        contract_repository = ContractRepository()
         contracts = contract_repository.get_recent(limit=100)
         
         # Convert to summary format
@@ -123,6 +121,7 @@ def list_contracts():
             'success': False,
             'error': 'Failed to list contracts'
         }), 500
+
 
 
 @contracts_bp.route('/contracts/upload', methods=['POST'])
@@ -148,16 +147,18 @@ def upload_contract():
         
         # Security validation
         validation_result = security_validator.validate_file_content(file)
-        if not validation_result['valid']:
+        if not validation_result.get('validation_passed', False):
             security_auditor.log_security_event(
-                event_type='file_upload_rejected',
-                details={'filename': file.filename, 'errors': validation_result['errors']},
-                request=request
+                event_type=SecurityEventType.FILE_VALIDATION_FAILED,
+                details={'filename': file.filename, 'errors': validation_result.get('errors', [])},
+                severity='MEDIUM',
+                user_ip=request.remote_addr,
+                user_agent=request.headers.get('User-Agent')
             )
             return jsonify({
                 'success': False,
                 'error': 'File validation failed',
-                'details': validation_result['errors']
+                'details': validation_result.get('errors', [])
             }), 400
         
         # Generate unique contract ID
@@ -196,6 +197,7 @@ def upload_contract():
         )
         
         # Store contract in database
+        contract_repository = ContractRepository()
         contract_repository.create_from_domain(contract)
         
         # Also store in memory for legacy compatibility
@@ -203,13 +205,15 @@ def upload_contract():
         
         # Log successful upload
         security_auditor.log_security_event(
-            event_type='file_upload_success',
+            event_type=SecurityEventType.FILE_UPLOAD,
             details={
                 'contract_id': contract_id,
                 'filename': original_filename,
                 'file_size': file_size
             },
-            request=request
+            severity='INFO',
+            user_ip=request.remote_addr,
+            user_agent=request.headers.get('User-Agent')
         )
         
         logger.info(f"Contract uploaded successfully: {contract_id}")
@@ -221,12 +225,21 @@ def upload_contract():
         })
         
     except Exception as e:
+        import traceback
+        error_details = str(e)
+        traceback_details = traceback.format_exc()
+        
         logger.error(f"Error uploading contract: {e}")
+        logger.error(f"Traceback: {traceback_details}")
+        
         security_auditor.log_security_event(
-            event_type='file_upload_error',
-            details={'error': str(e)},
-            request=request
+            event_type=SecurityEventType.ERROR_OCCURRED,
+            details={'error': str(e), 'traceback': traceback_details},
+            severity='HIGH',
+            user_ip=request.remote_addr,
+            user_agent=request.headers.get('User-Agent')
         )
+        
         return jsonify({
             'success': False,
             'error': 'Failed to upload contract'
@@ -241,6 +254,7 @@ def get_contract(contract_id):
         validated_id = ValidationHandler.validate_contract_id(contract_id)
         
         # Get contract from database
+        contract_repository = ContractRepository()
         contract_model = contract_repository.get_by_id(validated_id)
         
         if not contract_model:
@@ -262,13 +276,21 @@ def get_contract(contract_id):
 def delete_contract(contract_id):
     """Delete a contract and its file"""
     try:
-        if contract_id not in contracts_store:
+        # Validate contract ID
+        validated_id = ValidationHandler.validate_contract_id(contract_id)
+        
+        # Get contract from database
+        contract_repository = ContractRepository()
+        contract_model = contract_repository.get_by_id(validated_id)
+        
+        if not contract_model:
             return jsonify({
                 'success': False,
                 'error': 'Contract not found'
             }), 404
         
-        contract = contracts_store[contract_id]
+        # Convert to domain object to get file path
+        contract = contract_model.to_domain_object()
         
         # Delete file if it exists
         try:
@@ -279,14 +301,19 @@ def delete_contract(contract_id):
         except Exception as e:
             logger.warning(f"Failed to delete contract file: {e}")
         
-        # Remove from store
-        del contracts_store[contract_id]
+        # Remove from database
+        contract_repository.delete(validated_id)
+        
+        # Also remove from legacy in-memory store if present
+        contracts_store.pop(contract_id, None)
         
         # Log deletion
         security_auditor.log_security_event(
-            event_type='contract_deleted',
-            details={'contract_id': contract_id, 'filename': contract.original_filename},
-            request=request
+            event_type=SecurityEventType.FILE_UPLOAD,  # Using closest available event type
+            details={'contract_id': contract_id, 'filename': contract.original_filename, 'action': 'deleted'},
+            severity='INFO',
+            user_ip=request.remote_addr,
+            user_agent=request.headers.get('User-Agent')
         )
         
         return jsonify({

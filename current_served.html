@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Contract Analyzer Dashboard</title>
+    <link rel="stylesheet" href="/static/css/main.css">
+</head>
+<body>
+    <header>
+        <nav>
+            <div class="logo">Contract Analyzer</div>
+            <ul>
+                <li><a href="/" class="active">Dashboard</a></li>
+                <li><a href="/docs">Documentation</a></li>
+            </ul>
+        </nav>
+    </header>
+
+    <main>
+        <section class="upload-section">
+            <h2>Upload Contract</h2>
+            <form id="upload-form" class="upload-form">
+                <div class="file-input">
+                    <input type="file" id="contract-file" accept=".docx,.pdf,.txt">
+                    <label for="contract-file">Choose file or drag here</label>
+                </div>
+                <button type="submit">Upload & Analyze</button>
+            </form>
+        </section>
+
+        <section class="contracts-section">
+            <h2>Recent Contracts</h2>
+            <div id="contracts-list" class="contracts-list">
+                <!-- Contracts will be loaded here -->
+            </div>
+        </section>
+
+        <section class="analysis-section">
+            <h2>Analysis Results</h2>
+            <div id="analysis-results" class="analysis-results">
+                <!-- Analysis results will be shown here -->
+            </div>
+        </section>
+    </main>
+
+    <footer>
+        <p>&copy; 2025 Contract Analyzer. All rights reserved.</p>
+    </footer>
+
+    <script src="/static/js/dashboard.js"></script>
+</body>
+</html> 

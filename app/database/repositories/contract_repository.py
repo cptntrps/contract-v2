@@ -42,6 +42,29 @@ class ContractRepository(BaseRepository):
             logger.error(f"Error retrieving contract by filename {filename}: {e}")
             raise RepositoryError(f"Failed to retrieve contract: {e}")
     
+    def delete(self, contract_id: str) -> bool:
+        """
+        Delete a contract by ID
+        
+        Args:
+            contract_id: ID of contract to delete
+            
+        Returns:
+            True if deleted, False if not found
+        """
+        try:
+            contract = self.db.session.query(ContractModel).filter_by(id=contract_id).first()
+            if contract:
+                self.db.session.delete(contract)
+                self.db.session.commit()
+                logger.info(f"Deleted contract from database: {contract_id}")
+                return True
+            return False
+        except SQLAlchemyError as e:
+            self.db.session.rollback()
+            logger.error(f"Failed to delete contract {contract_id}: {e}")
+            raise RepositoryError(f"Database deletion failed: {str(e)}")
+    
     def get_recent(self, limit: int = 10) -> List[ContractModel]:
         """Get most recently uploaded contracts"""
         try:
